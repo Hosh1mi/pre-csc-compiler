@@ -37,8 +37,8 @@ SingleLineComment "//"[^\n]*
 {INT_LIT}       { yylval.int_val = strtol(yytext, nullptr, 0); return INT; }
 {FLOAT_LIT}     { yylval.float_val = strtof(yytext, nullptr); return FLOAT; }
 
-"int"           { return INT_TYPE; }
-"float"         { return FLOAT_TYPE; }
+"int"           { return INTTYPE; }
+"float"         { return FLOATTYPE; }
 "void"          { return VOID; }
 "const"         { return CONST; }
 "return"        { return RETURN; }
