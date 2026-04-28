@@ -1,5 +1,5 @@
 %code requires {
-#include "ast.hpp"
+#include "ast/ast.hpp"
 }
 
 %{
@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <FlexLexer.h>
-#include "ast.hpp"
+#include "ast/ast.hpp"
 #include "checker/checker.hpp"
 #include "checker/errReporter.hpp"
 

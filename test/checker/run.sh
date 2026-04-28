@@ -13,7 +13,7 @@ CXX=${CXX:-g++}
 "$CXX" -std=c++17 -I"$ROOT_DIR/include" \
   "$BUILD_DIR/parser.tab.cc" \
   "$BUILD_DIR/lex.yy.cc" \
-  "$ROOT_DIR/src/ast.cpp" \
+  "$ROOT_DIR/src/ast/ast.cpp" \
   "$ROOT_DIR/src/checker/checker.cpp" \
   "$ROOT_DIR/src/checker/errReporter.cpp" \
   -o "$BUILD_DIR/parser"

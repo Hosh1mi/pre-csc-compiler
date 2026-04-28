@@ -47,7 +47,7 @@ extern int yydebug;
 /* "%code requires" blocks.  */
 #line 1 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
 
-#include "ast.hpp"
+#include "ast/ast.hpp"
 
 #line 53 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.hh"
 

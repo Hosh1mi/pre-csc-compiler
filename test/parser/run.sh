@@ -13,7 +13,7 @@ CXX=${CXX:-g++}
 "$CXX" -std=c++17 -DDISABLE_SEMANTIC_CHECK -I"$ROOT_DIR/include" \
   "$BUILD_DIR/parser.tab.cc" \
   "$BUILD_DIR/lex.yy.cc" \
-  "$ROOT_DIR/src/ast.cpp" \
+  "$ROOT_DIR/src/ast/ast.cpp" \
   -o "$BUILD_DIR/parser"
 
 : > "$OUTPUT_FILE"
