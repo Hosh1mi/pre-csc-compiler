@@ -21,13 +21,13 @@ ASTNode* makeAstNode(const string& name, initializer_list<ASTNode*> kids, const 
 ASTNode* makeAstNode(const string& name, const vector<ASTNode*>& kids, const string& value = "", int line = 0);
 void printAst(ASTNode* node, int depth = 0);
 
-enum TYPE { INT_TYPE, FLOAT_TYPE, VOID_TYPE };
+enum TYPE  { INT_TYPE, FLOAT_TYPE, VOID_TYPE };
 enum STYPE { ST_EXPR, ST_RETURN, ST_SELECT, ST_ITERATION, ST_BLOCK, ST_BREAK, ST_CONTINUE, ST_EMPTY };
-enum AOP { AOP_ADD, AOP_SUB };
-enum MOP { MOP_MUL, MOP_DIV, MOP_MOD };
-enum UOP { UOP_POS, UOP_NEG, UOP_NOT, UOP_BITNOT };
-enum ROP { ROP_LT, ROP_LE, ROP_GT, ROP_GE };
-enum EOP { EOP_EQ, EOP_NE };
+enum AOP   { AOP_ADD, AOP_SUB };
+enum MOP   { MOP_MUL, MOP_DIV, MOP_MOD };
+enum UOP   { UOP_POS, UOP_NEG, UOP_NOT, UOP_BITNOT };
+enum ROP   { ROP_LT, ROP_LE, ROP_GT, ROP_GE };
+enum EOP   { EOP_EQ, EOP_NE };
 
 class BaseAST;
 class CompUnitAST;
@@ -64,7 +64,6 @@ class Visitor;
 
 class BaseAST {
 public:
-    virtual void accept(Visitor &visitor) = 0;
     BaseAST() = default;
     virtual ~BaseAST() = default;
 };
@@ -72,14 +71,12 @@ public:
 class CompUnitAST : public BaseAST {
 public:
     vector<unique_ptr<DeclDefAST>> declDefList;
-    void accept(Visitor &visitor) override;
 };
 
 class DeclDefAST : public BaseAST {
 public:
     unique_ptr<DeclAST> Decl = nullptr;
     unique_ptr<FuncDefAST> funcDef = nullptr;
-    void accept(Visitor &visitor) override;
 };
 
 class DeclAST : public BaseAST {
@@ -87,7 +84,6 @@ public:
     TYPE bType;
     bool isConst;
     vector<unique_ptr<DefAST>> defList;
-    void accept(Visitor &visitor) override;
 };
 
 class DefListAST {
@@ -100,7 +96,6 @@ public:
     unique_ptr<string> id;
     vector<unique_ptr<AddExpAST>> arrays;
     unique_ptr<InitValAST> initVal;
-    void accept(Visitor &visitor) override;
 };
 
 class ArraysAST {
@@ -112,7 +107,6 @@ class InitValAST : public BaseAST {
 public:
     unique_ptr<AddExpAST> exp;
     vector<unique_ptr<InitValAST>> initValList;
-    void accept(Visitor &visitor) override;
 };
 
 class InitValListAST {
@@ -126,7 +120,6 @@ public:
     unique_ptr<string> id;
     vector<unique_ptr<FuncFParamAST>> funcFParamList;
     unique_ptr<BlockAST> block = nullptr;
-    void accept(Visitor &visitor) override;
 };
 
 class FuncFParamListAST {
@@ -140,13 +133,11 @@ public:
     unique_ptr<string> id;
     bool isArray = false;
     vector<unique_ptr<AddExpAST>> arrays;
-    void accept(Visitor &visitor) override;
 };
 
 class BlockAST : public BaseAST {
 public:
     vector<unique_ptr<BlockItemAST>> blockItemList;
-    void accept(Visitor &visitor) override;
 };
 
 class BlockItemListAST {
@@ -158,7 +149,6 @@ class BlockItemAST : public BaseAST {
 public:
     unique_ptr<DeclAST> decl = nullptr;
     unique_ptr<StmtAST> stmt = nullptr;
-    void accept(Visitor &visitor) override;
 };
 
 class StmtAST : public BaseAST {
@@ -170,27 +160,23 @@ public:
     unique_ptr<SelectStmtAST> selectStmt = nullptr;
     unique_ptr<IterationStmtAST> iterationStmt = nullptr;
     unique_ptr<BlockAST> block = nullptr;
-    void accept(Visitor &visitor) override;
 };
 
 class ReturnStmtAST : public BaseAST {
 public:
     unique_ptr<AddExpAST> exp = nullptr;
-    void accept(Visitor &visitor) override;
 };
 
 class SelectStmtAST : public BaseAST {
 public:
     unique_ptr<LOrExpAST> cond;
     unique_ptr<StmtAST> ifStmt, elseStmt;
-    void accept(Visitor &visitor) override;
 };
 
 class IterationStmtAST : public BaseAST {
 public:
     unique_ptr<LOrExpAST> cond;
     unique_ptr<StmtAST> stmt;
-    void accept(Visitor &visitor) override;
 };
 
 class AddExpAST : public BaseAST {
@@ -198,7 +184,6 @@ public:
     unique_ptr<AddExpAST> addExp;
     unique_ptr<MulExpAST> mulExp;
     AOP op;
-    void accept(Visitor &visitor) override;
 };
 
 class MulExpAST : public BaseAST {
@@ -206,7 +191,6 @@ public:
     unique_ptr<UnaryExpAST> unaryExp;
     unique_ptr<MulExpAST> mulExp;
     MOP op;
-    void accept(Visitor &visitor) override;
 };
 
 class UnaryExpAST : public BaseAST {
@@ -215,7 +199,6 @@ public:
     unique_ptr<CallAST> call;
     unique_ptr<UnaryExpAST> unaryExp;
     UOP op;
-    void accept(Visitor &visitor) override;
 };
 
 class PrimaryExpAST : public BaseAST {
@@ -223,7 +206,6 @@ public:
     unique_ptr<AddExpAST> exp;
     unique_ptr<LValAST> lval;
     unique_ptr<NumberAST> number;
-    void accept(Visitor &visitor) override;
 };
 
 class NumberAST : public BaseAST {
@@ -233,21 +215,18 @@ public:
         int intval;
         float floatval;
     };
-    void accept(Visitor &visitor) override;
 };
 
 class LValAST : public BaseAST {
 public:
     unique_ptr<string> id;
     vector<unique_ptr<AddExpAST>> arrays;
-    void accept(Visitor &visitor) override;
 };
 
 class CallAST : public BaseAST {
 public:
     unique_ptr<string> id;
     vector<unique_ptr<AddExpAST>> funcCParamList;
-    void accept(Visitor &visitor) override;
 };
 
 class FuncCParamListAST {
@@ -260,7 +239,6 @@ public:
     unique_ptr<AddExpAST> addExp;
     unique_ptr<RelExpAST> relExp;
     ROP op;
-    void accept(Visitor &visitor) override;
 };
 
 class EqExpAST : public BaseAST {
@@ -268,21 +246,18 @@ public:
     unique_ptr<RelExpAST> relExp;
     unique_ptr<EqExpAST> eqExp;
     EOP op;
-    void accept(Visitor &visitor) override;
 };
 
 class LAndExpAST : public BaseAST {
 public:
     unique_ptr<EqExpAST> eqExp;
     unique_ptr<LAndExpAST> lAndExp;
-    void accept(Visitor &visitor) override;
 };
 
 class LOrExpAST : public BaseAST {
 public:
     unique_ptr<LOrExpAST> lOrExp;
     unique_ptr<LAndExpAST> lAndExp;
-    void accept(Visitor &visitor) override;
 };
 
 class Visitor {
