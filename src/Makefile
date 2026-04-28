@@ -4,4 +4,4 @@ compiler: parser.y lexer.l
 	g++ ast/ast.cpp ../build/parser.cpp ../build/lexer.cpp ir/irGen.cpp ir/ir.cpp checker/checker.cpp checker/errReporter.cpp main.cpp -o ../build/compiler
 
 run:
-	./../build/compiler test/ir/012_func_defn.sy
+	../build/compiler ../test/ir/012_func_defn.sy

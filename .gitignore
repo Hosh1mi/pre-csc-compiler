@@ -2,7 +2,6 @@
 /archive
 /.git
 /doc
-/build
 *.o
 *.obj
 *.exe
