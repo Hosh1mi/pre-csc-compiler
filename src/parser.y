@@ -1,5 +1,5 @@
 %code requires {
-#include "ast.h"
+#include "ast.hpp"
 }
 
 %{
@@ -9,7 +9,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <FlexLexer.h>
-#include "ast.h"
+#include "ast.hpp"
+#include "checker/checker.hpp"
+#include "checker/errReporter.hpp"
 
 using namespace std;
 
@@ -21,6 +23,7 @@ static yyFlexLexer* g_scanner = nullptr;
 
 extern int yylex();
 
+static int currentLine() { return g_scanner ? g_scanner->lineno() : 0; }
 static string sval(char* s) { return s ? string(s) : string(); }
 
 void yyerror(const char* s);
@@ -35,7 +38,7 @@ void yyerror(const char* s);
 %token <str> ID INT_LIT FLOAT_LIT
 %token LEX_ERR
 
-%type <node> CompUnit ExtDefList ExtDef VarDecl VarDefList VarDef Type FuncDef ParamListOpt ParamList Param Block BlockItems BlockItem Stmt Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp ArgListOpt ArgList PrimaryExp
+%type <node> CompUnit ExtDefList ExtDef VarDecl VarDefList VarDef Type FuncDef ParamListOpt ParamList Param Block BlockItems BlockItem Stmt Exp LOrExp LAndExp EqExp RelExp AddExp MulExp UnaryExp ArgListOpt ArgList PrimaryExp LVal ArrayDimsOpt ArrayDims
 
 %left OR
 %left AND
@@ -52,8 +55,8 @@ CompUnit
     ;
 
 ExtDefList
-    : ExtDefList ExtDef { $$ = makeAstNode("CompUnit", {$1, $2}); }
-    | ExtDef { $$ = makeAstNode("CompUnit", {$1}); }
+    : ExtDefList ExtDef { $$ = makeAstNode("CompUnit", $1->children, "CompUnit", $1 ? $1->line : currentLine()); $$->children.push_back($2); }
+    | ExtDef { $$ = makeAstNode("CompUnit", {$1}, "CompUnit", currentLine()); }
     ;
 
 ExtDef
@@ -62,50 +65,61 @@ ExtDef
     ;
 
 VarDecl
-    : Type VarDefList SEMICOLON { $$ = makeAstNode("VarDecl", {$1, $2}); }
+    : Type VarDefList SEMICOLON { $$ = makeAstNode("VarDecl", {$1, $2}, "VarDecl", currentLine()); }
     ;
 
 VarDefList
-    : VarDefList COMMA VarDef { $$ = makeAstNode("VarDefList", {$1, $3}); }
-    | VarDef { $$ = makeAstNode("VarDefList", {$1}); }
+    : VarDefList COMMA VarDef { $$ = makeAstNode("VarDefList", $1->children, "VarDefList", currentLine()); $$->children.push_back($3); }
+    | VarDef { $$ = makeAstNode("VarDefList", {$1}, "VarDefList", currentLine()); }
     ;
 
 VarDef
-    : ID { $$ = makeAstNode("Var", {}, sval($1)); free($1); }
-    | ID ASSIGN Exp { $$ = makeAstNode("InitVar", {makeAstNode("Var", {}, sval($1)), $3}); free($1); }
+    : ID ArrayDimsOpt { $$ = makeAstNode("Var", {$2}, sval($1), currentLine()); free($1); }
+    | ID ArrayDimsOpt ASSIGN Exp { $$ = makeAstNode("InitVar", {makeAstNode("Var", {$2}, sval($1), currentLine()), $4}, "InitVar", currentLine()); free($1); }
+    ;
+
+ArrayDimsOpt
+    : /* empty */ { $$ = makeAstNode("ArrayDims", {}, "ArrayDims", currentLine()); }
+    | ArrayDims { $$ = $1; }
+    ;
+
+ArrayDims
+    : ArrayDims LB Exp RB { $$ = makeAstNode("ArrayDims", {$1, $3}, "ArrayDims", currentLine()); }
+    | LB Exp RB { $$ = makeAstNode("ArrayDims", {$2}, "ArrayDims", currentLine()); }
     ;
 
 Type
-    : INT { $$ = makeAstNode("Type", {}, "int"); }
-    | FLOAT { $$ = makeAstNode("Type", {}, "float"); }
-    | VOID { $$ = makeAstNode("Type", {}, "void"); }
+    : INT { $$ = makeAstNode("Type", {}, "int", currentLine()); }
+    | FLOAT { $$ = makeAstNode("Type", {}, "float", currentLine()); }
+    | VOID { $$ = makeAstNode("Type", {}, "void", currentLine()); }
     ;
 
 FuncDef
-    : Type ID LP ParamListOpt RP Block { $$ = makeAstNode("FuncDef", {$1, makeAstNode("Name", {}, sval($2)), $4, $6}); free($2); }
+    : Type ID LP ParamListOpt RP Block { $$ = makeAstNode("FuncDef", {$1, makeAstNode("Name", {}, sval($2), currentLine()), $4, $6}, "FuncDef", currentLine()); free($2); }
     ;
 
 ParamListOpt
-    : /* empty */ { $$ = makeAstNode("Params", {}); }
+    : /* empty */ { $$ = makeAstNode("Params", {}, "Params", currentLine()); }
     | ParamList { $$ = $1; }
     ;
 
 ParamList
-    : ParamList COMMA Param { $$ = makeAstNode("Params", {$1, $3}); }
-    | Param { $$ = makeAstNode("Params", {$1}); }
+    : ParamList COMMA Param { $$ = makeAstNode("Params", $1->children, "Params", currentLine()); $$->children.push_back($3); }
+    | Param { $$ = makeAstNode("Params", {$1}, "Params", currentLine()); }
     ;
 
 Param
-    : Type ID { $$ = makeAstNode("Param", {$1, makeAstNode("Name", {}, sval($2))}); free($2); }
+    : Type ID { $$ = makeAstNode("Param", {$1, makeAstNode("Name", {}, sval($2), currentLine()), makeAstNode("ArrayDims", {}, "ArrayDims", currentLine())}, "Param", currentLine()); free($2); }
+    | Type ID ArrayDimsOpt { $$ = makeAstNode("Param", {$1, makeAstNode("Name", {}, sval($2), currentLine()), $3}, "Param", currentLine()); free($2); }
     ;
 
 Block
-    : LC BlockItems RC { $$ = makeAstNode("Block", {$2}); }
+    : LC BlockItems RC { $$ = makeAstNode("Block", {$2}, "Block", currentLine()); }
     ;
 
 BlockItems
-    : BlockItems BlockItem { $$ = makeAstNode("BlockItems", {$1, $2}); }
-    | /* empty */ { $$ = makeAstNode("BlockItems", {}); }
+    : BlockItems BlockItem { $$ = makeAstNode("BlockItems", $1->children, "BlockItems", currentLine()); $$->children.push_back($2); }
+    | /* empty */ { $$ = makeAstNode("BlockItems", {}, "BlockItems", currentLine()); }
     ;
 
 BlockItem
@@ -114,82 +128,87 @@ BlockItem
     ;
 
 Stmt
-    : SEMICOLON { $$ = makeAstNode("EmptyStmt", {}); }
-    | Exp SEMICOLON { $$ = makeAstNode("ExprStmt", {$1}); }
-    | RETURN Exp SEMICOLON { $$ = makeAstNode("Return", {$2}); }
-    | IF LP Exp RP Stmt { $$ = makeAstNode("If", {$3, $5}); }
-    | IF LP Exp RP Stmt ELSE Stmt { $$ = makeAstNode("IfElse", {$3, $5, $7}); }
-    | WHILE LP Exp RP Stmt { $$ = makeAstNode("While", {$3, $5}); }
-    | BREAK SEMICOLON { $$ = makeAstNode("Break", {}); }
-    | CONTINUE SEMICOLON { $$ = makeAstNode("Continue", {}); }
+    : SEMICOLON { $$ = makeAstNode("EmptyStmt", {}, "EmptyStmt", currentLine()); }
+    | Exp SEMICOLON { $$ = makeAstNode("ExprStmt", {$1}, "ExprStmt", currentLine()); }
+    | RETURN Exp SEMICOLON { $$ = makeAstNode("Return", {$2}, "Return", currentLine()); }
+    | IF LP Exp RP Stmt { $$ = makeAstNode("If", {$3, $5}, "If", currentLine()); }
+    | IF LP Exp RP Stmt ELSE Stmt { $$ = makeAstNode("IfElse", {$3, $5, $7}, "IfElse", currentLine()); }
+    | WHILE LP Exp RP Stmt { $$ = makeAstNode("While", {$3, $5}, "While", currentLine()); }
+    | BREAK SEMICOLON { $$ = makeAstNode("Break", {}, "Break", currentLine()); }
+    | CONTINUE SEMICOLON { $$ = makeAstNode("Continue", {}, "Continue", currentLine()); }
     | Block { $$ = $1; }
     ;
 
 Exp
-    : ID ASSIGN Exp { $$ = makeAstNode("Assign", {makeAstNode("Name", {}, sval($1)), $3}); free($1); }
+    : LVal ASSIGN Exp { $$ = makeAstNode("Assign", {$1, $3}, "Assign", currentLine()); }
     | LOrExp { $$ = $1; }
     ;
 
+LVal
+    : ID { $$ = makeAstNode("Name", {}, sval($1), currentLine()); free($1); }
+    | ID ArrayDimsOpt { $$ = makeAstNode("Name", {$2}, sval($1), currentLine()); free($1); }
+    ;
+
 LOrExp
-    : LOrExp OR LAndExp { $$ = makeAstNode("||", {$1, $3}); }
+    : LOrExp OR LAndExp { $$ = makeAstNode("||", {$1, $3}, "||", currentLine()); }
     | LAndExp { $$ = $1; }
     ;
 
 LAndExp
-    : LAndExp AND EqExp { $$ = makeAstNode("&&", {$1, $3}); }
+    : LAndExp AND EqExp { $$ = makeAstNode("&&", {$1, $3}, "&&", currentLine()); }
     | EqExp { $$ = $1; }
     ;
 
 EqExp
-    : EqExp EQ RelExp { $$ = makeAstNode("==", {$1, $3}); }
-    | EqExp NE RelExp { $$ = makeAstNode("!=", {$1, $3}); }
+    : EqExp EQ RelExp { $$ = makeAstNode("==", {$1, $3}, "==", currentLine()); }
+    | EqExp NE RelExp { $$ = makeAstNode("!=", {$1, $3}, "!=", currentLine()); }
     | RelExp { $$ = $1; }
     ;
 
 RelExp
-    : RelExp LT AddExp { $$ = makeAstNode("<", {$1, $3}); }
-    | RelExp LE AddExp { $$ = makeAstNode("<=", {$1, $3}); }
-    | RelExp GT AddExp { $$ = makeAstNode(">", {$1, $3}); }
-    | RelExp GE AddExp { $$ = makeAstNode(">=", {$1, $3}); }
+    : RelExp LT AddExp { $$ = makeAstNode("<", {$1, $3}, "<", currentLine()); }
+    | RelExp LE AddExp { $$ = makeAstNode("<=", {$1, $3}, "<=", currentLine()); }
+    | RelExp GT AddExp { $$ = makeAstNode(">", {$1, $3}, ">", currentLine()); }
+    | RelExp GE AddExp { $$ = makeAstNode(">=", {$1, $3}, ">=", currentLine()); }
     | AddExp { $$ = $1; }
     ;
 
 AddExp
-    : AddExp ADD MulExp { $$ = makeAstNode("+", {$1, $3}); }
-    | AddExp MINUS MulExp { $$ = makeAstNode("-", {$1, $3}); }
+    : AddExp ADD MulExp { $$ = makeAstNode("+", {$1, $3}, "+", currentLine()); }
+    | AddExp MINUS MulExp { $$ = makeAstNode("-", {$1, $3}, "-", currentLine()); }
     | MulExp { $$ = $1; }
     ;
 
 MulExp
-    : MulExp MUL UnaryExp { $$ = makeAstNode("*", {$1, $3}); }
-    | MulExp DIV UnaryExp { $$ = makeAstNode("/", {$1, $3}); }
-    | MulExp MOD UnaryExp { $$ = makeAstNode("%", {$1, $3}); }
+    : MulExp MUL UnaryExp { $$ = makeAstNode("*", {$1, $3}, "*", currentLine()); }
+    | MulExp DIV UnaryExp { $$ = makeAstNode("/", {$1, $3}, "/", currentLine()); }
+    | MulExp MOD UnaryExp { $$ = makeAstNode("%", {$1, $3}, "%", currentLine()); }
     | UnaryExp { $$ = $1; }
     ;
 
 UnaryExp
     : PrimaryExp { $$ = $1; }
-    | MINUS UnaryExp %prec UMINUS { $$ = makeAstNode("neg", {$2}); }
-    | NOT UnaryExp { $$ = makeAstNode("!", {$2}); }
-    | TILDE UnaryExp { $$ = makeAstNode("~", {$2}); }
-    | ID LP ArgListOpt RP { $$ = makeAstNode("Call", {makeAstNode("Name", {}, sval($1)), $3}); free($1); }
+    | MINUS UnaryExp %prec UMINUS { $$ = makeAstNode("neg", {$2}, "neg", currentLine()); }
+    | NOT UnaryExp { $$ = makeAstNode("!", {$2}, "!", currentLine()); }
+    | TILDE UnaryExp { $$ = makeAstNode("~", {$2}, "~", currentLine()); }
+    | ID LP ArgListOpt RP { $$ = makeAstNode("Call", {makeAstNode("Name", {}, sval($1), currentLine()), $3}, "Call", currentLine()); free($1); }
     ;
 
 ArgListOpt
-    : /* empty */ { $$ = makeAstNode("Args", {}); }
+    : /* empty */ { $$ = makeAstNode("Args", {}, "Args", currentLine()); }
     | ArgList { $$ = $1; }
     ;
 
 ArgList
-    : ArgList COMMA Exp { $$ = makeAstNode("Args", {$1, $3}); }
-    | Exp { $$ = makeAstNode("Args", {$1}); }
+    : ArgList COMMA Exp { $$ = makeAstNode("Args", $1->children, "Args", currentLine()); $$->children.push_back($3); }
+    | Exp { $$ = makeAstNode("Args", {$1}, "Args", currentLine()); }
     ;
 
 PrimaryExp
     : LP Exp RP { $$ = $2; }
-    | ID { $$ = makeAstNode("Name", {}, sval($1)); free($1); }
-    | INT_LIT { $$ = makeAstNode("Int", {}, sval($1)); free($1); }
-    | FLOAT_LIT { $$ = makeAstNode("Float", {}, sval($1)); free($1); }
+    | LVal { $$ = $1; }
+    | INT_LIT { $$ = makeAstNode("Int", {}, sval($1), currentLine()); free($1); }
+    | FLOAT_LIT { $$ = makeAstNode("Float", {}, sval($1), currentLine()); free($1); }
     ;
 
 %%
@@ -208,6 +227,15 @@ int main(int argc, char** argv) {
     g_scanner = &scanner;
     int ret = yyparse();
     if (ret == 0 && g_root) {
+#ifndef DISABLE_SEMANTIC_CHECK
+        ErrReporter reporter;
+        Checker checker(reporter);
+        checker.check(g_root);
+        if (reporter.hasError()) {
+            reporter.print();
+            return 1;
+        }
+#endif
         printAst(g_root);
         return 0;
     }

@@ -1,22 +1,22 @@
-#include "../include/ast.h"
+#include "../include/ast.hpp"
 
 #include <iostream>
 #include <utility>
 
-ASTNode::ASTNode(std::string n, std::string v) : name(std::move(n)), value(std::move(v)) {}
+ASTNode::ASTNode(std::string n, std::string v, int l) : name(std::move(n)), value(std::move(v)), line(l) {}
 
-ASTNode* makeAstNode(const std::string& name, const std::string& value) {
-    return new ASTNode(name, value);
+ASTNode* makeAstNode(const std::string& name, const std::string& value, int line) {
+    return new ASTNode(name, value, line);
 }
 
-ASTNode* makeAstNode(const std::string& name, std::initializer_list<ASTNode*> kids, const std::string& value) {
-    auto node = makeAstNode(name, value);
+ASTNode* makeAstNode(const std::string& name, std::initializer_list<ASTNode*> kids, const std::string& value, int line) {
+    auto node = makeAstNode(name, value, line);
     node->children.assign(kids.begin(), kids.end());
     return node;
 }
 
-ASTNode* makeAstNode(const std::string& name, const std::vector<ASTNode*>& kids, const std::string& value) {
-    auto node = makeAstNode(name, value);
+ASTNode* makeAstNode(const std::string& name, const std::vector<ASTNode*>& kids, const std::string& value, int line) {
+    auto node = makeAstNode(name, value, line);
     node->children = kids;
     return node;
 }

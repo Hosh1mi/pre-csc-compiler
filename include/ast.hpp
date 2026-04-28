@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstring>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -11,14 +10,15 @@ using namespace std;
 struct ASTNode {
     string name;
     string value;
+    int line = 0;
     vector<ASTNode*> children;
 
-    ASTNode(string n, string v = "");
+    ASTNode(string n, string v = "", int l = 0);
 };
 
-ASTNode* makeAstNode(const string& name, const string& value = "");
-ASTNode* makeAstNode(const string& name, initializer_list<ASTNode*> kids, const string& value = "");
-ASTNode* makeAstNode(const string& name, const vector<ASTNode*>& kids, const string& value = "");
+ASTNode* makeAstNode(const string& name, const string& value = "", int line = 0);
+ASTNode* makeAstNode(const string& name, initializer_list<ASTNode*> kids, const string& value = "", int line = 0);
+ASTNode* makeAstNode(const string& name, const vector<ASTNode*>& kids, const string& value = "", int line = 0);
 void printAst(ASTNode* node, int depth = 0);
 
 enum TYPE { INT_TYPE, FLOAT_TYPE, VOID_TYPE };

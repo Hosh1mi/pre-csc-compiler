@@ -67,7 +67,7 @@
 
 
 /* First part of user prologue.  */
-#line 5 "src/parser.y"
+#line 5 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
 
 #include <fstream>
 #include <iostream>
@@ -75,7 +75,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <FlexLexer.h>
-#include "ast.h"
+#include "ast.hpp"
+#include "checker/checker.hpp"
+#include "checker/errReporter.hpp"
 
 using namespace std;
 
@@ -87,11 +89,12 @@ static yyFlexLexer* g_scanner = nullptr;
 
 extern int yylex();
 
+static int currentLine() { return g_scanner ? g_scanner->lineno() : 0; }
 static string sval(char* s) { return s ? string(s) : string(); }
 
 void yyerror(const char* s);
 
-#line 95 "build/parser.tab.cc"
+#line 98 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -170,26 +173,29 @@ enum yysymbol_kind_t
   YYSYMBOL_VarDecl = 48,                   /* VarDecl  */
   YYSYMBOL_VarDefList = 49,                /* VarDefList  */
   YYSYMBOL_VarDef = 50,                    /* VarDef  */
-  YYSYMBOL_Type = 51,                      /* Type  */
-  YYSYMBOL_FuncDef = 52,                   /* FuncDef  */
-  YYSYMBOL_ParamListOpt = 53,              /* ParamListOpt  */
-  YYSYMBOL_ParamList = 54,                 /* ParamList  */
-  YYSYMBOL_Param = 55,                     /* Param  */
-  YYSYMBOL_Block = 56,                     /* Block  */
-  YYSYMBOL_BlockItems = 57,                /* BlockItems  */
-  YYSYMBOL_BlockItem = 58,                 /* BlockItem  */
-  YYSYMBOL_Stmt = 59,                      /* Stmt  */
-  YYSYMBOL_Exp = 60,                       /* Exp  */
-  YYSYMBOL_LOrExp = 61,                    /* LOrExp  */
-  YYSYMBOL_LAndExp = 62,                   /* LAndExp  */
-  YYSYMBOL_EqExp = 63,                     /* EqExp  */
-  YYSYMBOL_RelExp = 64,                    /* RelExp  */
-  YYSYMBOL_AddExp = 65,                    /* AddExp  */
-  YYSYMBOL_MulExp = 66,                    /* MulExp  */
-  YYSYMBOL_UnaryExp = 67,                  /* UnaryExp  */
-  YYSYMBOL_ArgListOpt = 68,                /* ArgListOpt  */
-  YYSYMBOL_ArgList = 69,                   /* ArgList  */
-  YYSYMBOL_PrimaryExp = 70                 /* PrimaryExp  */
+  YYSYMBOL_ArrayDimsOpt = 51,              /* ArrayDimsOpt  */
+  YYSYMBOL_ArrayDims = 52,                 /* ArrayDims  */
+  YYSYMBOL_Type = 53,                      /* Type  */
+  YYSYMBOL_FuncDef = 54,                   /* FuncDef  */
+  YYSYMBOL_ParamListOpt = 55,              /* ParamListOpt  */
+  YYSYMBOL_ParamList = 56,                 /* ParamList  */
+  YYSYMBOL_Param = 57,                     /* Param  */
+  YYSYMBOL_Block = 58,                     /* Block  */
+  YYSYMBOL_BlockItems = 59,                /* BlockItems  */
+  YYSYMBOL_BlockItem = 60,                 /* BlockItem  */
+  YYSYMBOL_Stmt = 61,                      /* Stmt  */
+  YYSYMBOL_Exp = 62,                       /* Exp  */
+  YYSYMBOL_LVal = 63,                      /* LVal  */
+  YYSYMBOL_LOrExp = 64,                    /* LOrExp  */
+  YYSYMBOL_LAndExp = 65,                   /* LAndExp  */
+  YYSYMBOL_EqExp = 66,                     /* EqExp  */
+  YYSYMBOL_RelExp = 67,                    /* RelExp  */
+  YYSYMBOL_AddExp = 68,                    /* AddExp  */
+  YYSYMBOL_MulExp = 69,                    /* MulExp  */
+  YYSYMBOL_UnaryExp = 70,                  /* UnaryExp  */
+  YYSYMBOL_ArgListOpt = 71,                /* ArgListOpt  */
+  YYSYMBOL_ArgList = 72,                   /* ArgList  */
+  YYSYMBOL_PrimaryExp = 73                 /* PrimaryExp  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -517,16 +523,16 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  10
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   123
+#define YYLAST   142
 
 /* YYNTOKENS -- Number of terminals.  */
 #define YYNTOKENS  44
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  27
+#define YYNNTS  30
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  68
+#define YYNRULES  75
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  117
+#define YYNSTATES  128
 
 /* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   298
@@ -579,13 +585,14 @@ static const yytype_int8 yytranslate[] =
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint8 yyrline[] =
 {
-       0,    51,    51,    55,    56,    60,    61,    65,    69,    70,
-      74,    75,    79,    80,    81,    85,    89,    90,    94,    95,
-      99,   103,   107,   108,   112,   113,   117,   118,   119,   120,
-     121,   122,   123,   124,   125,   129,   130,   134,   135,   139,
-     140,   144,   145,   146,   150,   151,   152,   153,   154,   158,
-     159,   160,   164,   165,   166,   167,   171,   172,   173,   174,
-     175,   179,   180,   184,   185,   189,   190,   191,   192
+       0,    54,    54,    58,    59,    63,    64,    68,    72,    73,
+      77,    78,    82,    83,    87,    88,    92,    93,    94,    98,
+     102,   103,   107,   108,   112,   113,   117,   121,   122,   126,
+     127,   131,   132,   133,   134,   135,   136,   137,   138,   139,
+     143,   144,   148,   149,   153,   154,   158,   159,   163,   164,
+     165,   169,   170,   171,   172,   173,   177,   178,   179,   183,
+     184,   185,   186,   190,   191,   192,   193,   194,   198,   199,
+     203,   204,   208,   209,   210,   211
 };
 #endif
 
@@ -607,10 +614,11 @@ static const char *const yytname[] =
   "MINUS", "NOT", "TILDE", "ASSIGN", "ADD", "MUL", "DIV", "MOD", "AND",
   "OR", "EQ", "NE", "LT", "LE", "GT", "GE", "ID", "INT_LIT", "FLOAT_LIT",
   "LEX_ERR", "UMINUS", "$accept", "CompUnit", "ExtDefList", "ExtDef",
-  "VarDecl", "VarDefList", "VarDef", "Type", "FuncDef", "ParamListOpt",
-  "ParamList", "Param", "Block", "BlockItems", "BlockItem", "Stmt", "Exp",
-  "LOrExp", "LAndExp", "EqExp", "RelExp", "AddExp", "MulExp", "UnaryExp",
-  "ArgListOpt", "ArgList", "PrimaryExp", YY_NULLPTR
+  "VarDecl", "VarDefList", "VarDef", "ArrayDimsOpt", "ArrayDims", "Type",
+  "FuncDef", "ParamListOpt", "ParamList", "Param", "Block", "BlockItems",
+  "BlockItem", "Stmt", "Exp", "LVal", "LOrExp", "LAndExp", "EqExp",
+  "RelExp", "AddExp", "MulExp", "UnaryExp", "ArgListOpt", "ArgList",
+  "PrimaryExp", YY_NULLPTR
 };
 
 static const char *
@@ -620,7 +628,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-77)
+#define YYPACT_NINF (-111)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -634,18 +642,19 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      16,   -77,   -77,   -77,    26,    16,   -77,   -77,    -7,   -77,
-     -77,   -77,    -2,   -18,   -77,    16,    43,    20,   -77,    47,
-      35,    21,   -77,    43,    72,    72,    72,     1,   -77,   -77,
-     -77,    23,    62,     4,    39,    31,    70,   -77,   -77,    52,
-     -77,   -77,    77,    16,    87,    89,   -77,   -77,   -77,    43,
-      43,    72,    72,    72,    72,    72,    72,    72,    72,    72,
-      72,    72,    72,    72,   -77,   -77,   -77,   -77,   -77,    90,
-      84,   -77,    62,     4,    39,    39,    31,    31,    31,    31,
-      70,    70,   -77,   -77,   -77,     5,   -77,    43,    43,    92,
-      93,    88,    94,   -77,   -77,   -77,    20,   -77,   -77,   -77,
-      95,   -77,    96,    43,    43,   -77,   -77,   -77,   -77,   103,
-     104,    40,    40,    98,   -77,    40,   -77
+      27,  -111,  -111,  -111,     1,    27,  -111,  -111,   -24,  -111,
+    -111,  -111,    29,    17,  -111,    27,    -6,    -2,    36,    16,
+    -111,    19,    54,    45,  -111,    -6,    -6,    -6,    -6,    50,
+    -111,  -111,    63,    55,    61,    65,    37,   -15,   -13,    20,
+    -111,  -111,    -6,    -6,    71,  -111,    71,    80,    27,    88,
+    -111,  -111,  -111,  -111,    -6,  -111,  -111,    -6,    -6,    -6,
+      -6,    -6,    -6,    -6,    -6,    -6,    -6,    -6,    -6,    -6,
+      -6,  -111,    87,  -111,  -111,  -111,  -111,  -111,  -111,    90,
+      86,  -111,    65,    37,   -15,   -15,   -13,   -13,   -13,   -13,
+      20,    20,  -111,  -111,  -111,  -111,    49,  -111,    -6,    -6,
+     102,   103,    97,    99,  -111,  -111,  -111,    16,  -111,  -111,
+    -111,   100,  -111,   107,    -6,    -6,  -111,  -111,  -111,  -111,
+     108,   109,   101,   101,   119,  -111,   101,  -111
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -653,34 +662,35 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       0,    12,    13,    14,     0,     2,     4,     5,     0,     6,
-       1,     3,    10,     0,     9,    16,     0,     0,     7,     0,
-       0,    17,    19,     0,     0,     0,     0,    66,    67,    68,
-      11,    36,    38,    40,    43,    48,    51,    55,    56,    10,
-       8,    20,     0,     0,     0,    66,    57,    58,    59,    61,
+       0,    16,    17,    18,     0,     2,     4,     5,     0,     6,
+       1,     3,    12,     0,     9,    20,     0,    10,    13,     0,
+       7,     0,     0,    21,    23,     0,     0,     0,     0,    12,
+      74,    75,     0,    73,    41,    45,    47,    50,    55,    58,
+      62,    63,     0,     0,    12,     8,    12,     0,     0,     0,
+      73,    64,    65,    66,    68,    43,    15,     0,     0,     0,
        0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,    23,    15,    18,    65,    64,     0,
-      62,    35,    37,    39,    41,    42,    44,    45,    46,    47,
-      50,    49,    52,    53,    54,     0,    60,     0,     0,     0,
-       0,     0,     0,    21,    26,    24,     0,    34,    22,    25,
-       0,    63,     0,     0,     0,    32,    33,    27,    28,     0,
-       0,     0,     0,    29,    31,     0,    30
+       0,    11,     0,    25,    28,    19,    22,    72,    71,     0,
+      69,    40,    44,    46,    48,    49,    51,    52,    53,    54,
+      57,    56,    59,    60,    61,    14,     0,    67,     0,     0,
+       0,     0,     0,     0,    26,    31,    29,     0,    39,    27,
+      30,     0,    70,     0,     0,     0,    37,    38,    32,    33,
+       0,     0,     0,     0,    34,    36,     0,    35
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -77,   -77,   -77,   105,    24,   -77,   102,   -12,   -77,   -77,
-     -77,    78,    80,   -77,   -77,   -76,   -16,   -77,    69,    71,
-       8,    34,    10,   -20,   -77,   -77,   -77
+    -111,  -111,  -111,   124,    34,  -111,   112,   -21,  -111,    -9,
+    -111,  -111,  -111,    84,    89,  -111,  -111,  -110,   -14,   -16,
+    -111,    75,    76,    31,    13,    28,   -23,  -111,  -111,  -111
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     4,     5,     6,     7,    13,    14,     8,     9,    20,
-      21,    22,    97,    85,    98,    99,   100,    31,    32,    33,
-      34,    35,    36,    37,    69,    70,    38
+       0,     4,     5,     6,     7,    13,    14,    17,    18,     8,
+       9,    22,    23,    24,   108,    96,   109,   110,   111,    50,
+      34,    35,    36,    37,    38,    39,    40,    79,    80,    41
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -688,78 +698,85 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      30,    17,    18,    19,    46,    47,    48,    44,     1,     2,
-       3,    15,    88,    89,    49,    90,    91,    92,    23,     1,
-       2,     3,    64,    93,    16,    94,    10,    50,    24,    25,
-      26,    19,    12,    68,    71,   113,   114,    53,    54,   116,
-      43,    82,    83,    84,    27,    28,    29,    88,    89,    42,
-      90,    91,    92,    23,    59,    51,    23,    64,    60,    39,
-      94,    74,    75,    24,    25,    26,    24,    25,    26,    80,
-      81,   101,   102,    96,    55,    56,    57,    58,    16,    27,
-      28,    29,    27,    28,    29,    23,    41,   109,   110,    76,
-      77,    78,    79,    52,    64,    24,    25,    26,    61,    62,
-      63,    67,    49,    87,    86,   103,   104,   115,   105,    95,
-      11,    45,    28,    29,   106,   107,   108,   111,   112,    40,
-      72,    66,    65,    73
+      33,    10,    32,    51,    52,    53,    21,    25,    55,    33,
+      66,    49,   124,   125,    67,    12,   127,    26,    27,    28,
+      62,    63,    64,    65,    42,    73,    33,    33,    71,    72,
+       1,     2,     3,    29,    30,    31,    19,    20,    33,    21,
+      78,    33,    15,    81,    16,    92,    93,    94,    68,    69,
+      70,    43,     1,     2,     3,    44,    99,   100,    46,   101,
+     102,   103,    25,    54,    48,    16,    74,   104,    47,   105,
+      60,    61,    26,    27,    28,    86,    87,    88,    89,    56,
+      33,    57,    33,    33,   112,   113,    16,   107,    29,    30,
+      31,    84,    85,    58,    90,    91,    59,    74,    33,    33,
+     120,   121,    77,    95,    97,    98,    33,    33,    99,   100,
+      33,   101,   102,   103,    25,   114,   115,   116,    74,   117,
+     118,   105,   122,   123,    26,    27,    28,   119,   126,    11,
+     106,    45,    76,    82,     0,    83,    75,     0,     0,     0,
+      29,    30,    31
 };
 
 static const yytype_int8 yycheck[] =
 {
-      16,    19,    20,    15,    24,    25,    26,    23,     3,     4,
-       5,    13,     7,     8,    13,    10,    11,    12,    13,     3,
-       4,     5,    17,    18,    26,    20,     0,    26,    23,    24,
-      25,    43,    39,    49,    50,   111,   112,    33,    34,   115,
-      19,    61,    62,    63,    39,    40,    41,     7,     8,    14,
-      10,    11,    12,    13,    23,    32,    13,    17,    27,    39,
-      20,    53,    54,    23,    24,    25,    23,    24,    25,    59,
-      60,    87,    88,    85,    35,    36,    37,    38,    26,    39,
-      40,    41,    39,    40,    41,    13,    39,   103,   104,    55,
-      56,    57,    58,    31,    17,    23,    24,    25,    28,    29,
-      30,    14,    13,    19,    14,    13,    13,     9,    20,    85,
-       5,    39,    40,    41,    20,    20,    20,    14,    14,    17,
-      51,    43,    42,    52
+      16,     0,    16,    26,    27,    28,    15,    13,    29,    25,
+      23,    25,   122,   123,    27,    39,   126,    23,    24,    25,
+      35,    36,    37,    38,    26,    46,    42,    43,    42,    43,
+       3,     4,     5,    39,    40,    41,    19,    20,    54,    48,
+      54,    57,    13,    57,    15,    68,    69,    70,    28,    29,
+      30,    15,     3,     4,     5,    39,     7,     8,    39,    10,
+      11,    12,    13,    13,    19,    15,    17,    18,    14,    20,
+      33,    34,    23,    24,    25,    62,    63,    64,    65,    16,
+      96,    26,    98,    99,    98,    99,    15,    96,    39,    40,
+      41,    60,    61,    32,    66,    67,    31,    17,   114,   115,
+     114,   115,    14,    16,    14,    19,   122,   123,     7,     8,
+     126,    10,    11,    12,    13,    13,    13,    20,    17,    20,
+      20,    20,    14,    14,    23,    24,    25,    20,     9,     5,
+      96,    19,    48,    58,    -1,    59,    47,    -1,    -1,    -1,
+      39,    40,    41
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,     3,     4,     5,    45,    46,    47,    48,    51,    52,
-       0,    47,    39,    49,    50,    13,    26,    19,    20,    51,
-      53,    54,    55,    13,    23,    24,    25,    39,    40,    41,
-      60,    61,    62,    63,    64,    65,    66,    67,    70,    39,
-      50,    39,    14,    19,    60,    39,    67,    67,    67,    13,
-      26,    32,    31,    33,    34,    35,    36,    37,    38,    23,
-      27,    28,    29,    30,    17,    56,    55,    14,    60,    68,
-      69,    60,    62,    63,    64,    64,    65,    65,    65,    65,
-      66,    66,    67,    67,    67,    57,    14,    19,     7,     8,
-      10,    11,    12,    18,    20,    48,    51,    56,    58,    59,
-      60,    60,    60,    13,    13,    20,    20,    20,    20,    60,
-      60,    14,    14,    59,    59,     9,    59
+       0,     3,     4,     5,    45,    46,    47,    48,    53,    54,
+       0,    47,    39,    49,    50,    13,    15,    51,    52,    19,
+      20,    53,    55,    56,    57,    13,    23,    24,    25,    39,
+      40,    41,    62,    63,    64,    65,    66,    67,    68,    69,
+      70,    73,    26,    15,    39,    50,    39,    14,    19,    62,
+      63,    70,    70,    70,    13,    51,    16,    26,    32,    31,
+      33,    34,    35,    36,    37,    38,    23,    27,    28,    29,
+      30,    62,    62,    51,    17,    58,    57,    14,    62,    71,
+      72,    62,    65,    66,    67,    67,    68,    68,    68,    68,
+      69,    69,    70,    70,    70,    16,    59,    14,    19,     7,
+       8,    10,    11,    12,    18,    20,    48,    53,    58,    60,
+      61,    62,    62,    62,    13,    13,    20,    20,    20,    20,
+      62,    62,    14,    14,    61,    61,     9,    61
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
        0,    44,    45,    46,    46,    47,    47,    48,    49,    49,
-      50,    50,    51,    51,    51,    52,    53,    53,    54,    54,
-      55,    56,    57,    57,    58,    58,    59,    59,    59,    59,
-      59,    59,    59,    59,    59,    60,    60,    61,    61,    62,
-      62,    63,    63,    63,    64,    64,    64,    64,    64,    65,
-      65,    65,    66,    66,    66,    66,    67,    67,    67,    67,
-      67,    68,    68,    69,    69,    70,    70,    70,    70
+      50,    50,    51,    51,    52,    52,    53,    53,    53,    54,
+      55,    55,    56,    56,    57,    57,    58,    59,    59,    60,
+      60,    61,    61,    61,    61,    61,    61,    61,    61,    61,
+      62,    62,    63,    63,    64,    64,    65,    65,    66,    66,
+      66,    67,    67,    67,    67,    67,    68,    68,    68,    69,
+      69,    69,    69,    70,    70,    70,    70,    70,    71,    71,
+      72,    72,    73,    73,    73,    73
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     1,     2,     1,     1,     1,     3,     3,     1,
-       1,     3,     1,     1,     1,     6,     0,     1,     3,     1,
-       2,     3,     2,     0,     1,     1,     1,     2,     3,     5,
-       7,     5,     2,     2,     1,     3,     1,     3,     1,     3,
-       1,     3,     3,     1,     3,     3,     3,     3,     1,     3,
-       3,     1,     3,     3,     3,     1,     1,     2,     2,     2,
-       4,     0,     1,     3,     1,     3,     1,     1,     1
+       2,     4,     0,     1,     4,     3,     1,     1,     1,     6,
+       0,     1,     3,     1,     2,     3,     3,     2,     0,     1,
+       1,     1,     2,     3,     5,     7,     5,     2,     2,     1,
+       3,     1,     1,     2,     3,     1,     3,     1,     3,     3,
+       1,     3,     3,     3,     3,     1,     3,     3,     1,     3,
+       3,     3,     1,     1,     2,     2,     2,     4,     0,     1,
+       3,     1,     3,     1,     1,     1
 };
 
 
@@ -1493,409 +1510,451 @@ yyreduce:
   switch (yyn)
     {
   case 2: /* CompUnit: ExtDefList  */
-#line 51 "src/parser.y"
+#line 54 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
                  { g_root = (yyvsp[0].node); }
-#line 1499 "build/parser.tab.cc"
+#line 1516 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 3: /* ExtDefList: ExtDefList ExtDef  */
-#line 55 "src/parser.y"
-                        { (yyval.node) = makeAstNode("CompUnit", {(yyvsp[-1].node), (yyvsp[0].node)}); }
-#line 1505 "build/parser.tab.cc"
+#line 58 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("CompUnit", (yyvsp[-1].node)->children, "CompUnit", (yyvsp[-1].node) ? (yyvsp[-1].node)->line : currentLine()); (yyval.node)->children.push_back((yyvsp[0].node)); }
+#line 1522 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 4: /* ExtDefList: ExtDef  */
-#line 56 "src/parser.y"
-             { (yyval.node) = makeAstNode("CompUnit", {(yyvsp[0].node)}); }
-#line 1511 "build/parser.tab.cc"
+#line 59 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+             { (yyval.node) = makeAstNode("CompUnit", {(yyvsp[0].node)}, "CompUnit", currentLine()); }
+#line 1528 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 5: /* ExtDef: VarDecl  */
-#line 60 "src/parser.y"
+#line 63 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
               { (yyval.node) = (yyvsp[0].node); }
-#line 1517 "build/parser.tab.cc"
+#line 1534 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 6: /* ExtDef: FuncDef  */
-#line 61 "src/parser.y"
+#line 64 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
               { (yyval.node) = (yyvsp[0].node); }
-#line 1523 "build/parser.tab.cc"
+#line 1540 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 7: /* VarDecl: Type VarDefList SEMICOLON  */
-#line 65 "src/parser.y"
-                                { (yyval.node) = makeAstNode("VarDecl", {(yyvsp[-2].node), (yyvsp[-1].node)}); }
-#line 1529 "build/parser.tab.cc"
+#line 68 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                                { (yyval.node) = makeAstNode("VarDecl", {(yyvsp[-2].node), (yyvsp[-1].node)}, "VarDecl", currentLine()); }
+#line 1546 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 8: /* VarDefList: VarDefList COMMA VarDef  */
-#line 69 "src/parser.y"
-                              { (yyval.node) = makeAstNode("VarDefList", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1535 "build/parser.tab.cc"
+#line 72 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                              { (yyval.node) = makeAstNode("VarDefList", (yyvsp[-2].node)->children, "VarDefList", currentLine()); (yyval.node)->children.push_back((yyvsp[0].node)); }
+#line 1552 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
   case 9: /* VarDefList: VarDef  */
-#line 70 "src/parser.y"
-             { (yyval.node) = makeAstNode("VarDefList", {(yyvsp[0].node)}); }
-#line 1541 "build/parser.tab.cc"
+#line 73 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+             { (yyval.node) = makeAstNode("VarDefList", {(yyvsp[0].node)}, "VarDefList", currentLine()); }
+#line 1558 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 10: /* VarDef: ID  */
-#line 74 "src/parser.y"
-         { (yyval.node) = makeAstNode("Var", {}, sval((yyvsp[0].str))); free((yyvsp[0].str)); }
-#line 1547 "build/parser.tab.cc"
+  case 10: /* VarDef: ID ArrayDimsOpt  */
+#line 77 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("Var", {(yyvsp[0].node)}, sval((yyvsp[-1].str)), currentLine()); free((yyvsp[-1].str)); }
+#line 1564 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 11: /* VarDef: ID ASSIGN Exp  */
-#line 75 "src/parser.y"
-                    { (yyval.node) = makeAstNode("InitVar", {makeAstNode("Var", {}, sval((yyvsp[-2].str))), (yyvsp[0].node)}); free((yyvsp[-2].str)); }
-#line 1553 "build/parser.tab.cc"
+  case 11: /* VarDef: ID ArrayDimsOpt ASSIGN Exp  */
+#line 78 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                                 { (yyval.node) = makeAstNode("InitVar", {makeAstNode("Var", {(yyvsp[-2].node)}, sval((yyvsp[-3].str)), currentLine()), (yyvsp[0].node)}, "InitVar", currentLine()); free((yyvsp[-3].str)); }
+#line 1570 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 12: /* Type: INT  */
-#line 79 "src/parser.y"
-          { (yyval.node) = makeAstNode("Type", {}, "int"); }
-#line 1559 "build/parser.tab.cc"
+  case 12: /* ArrayDimsOpt: %empty  */
+#line 82 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                  { (yyval.node) = makeAstNode("ArrayDims", {}, "ArrayDims", currentLine()); }
+#line 1576 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 13: /* Type: FLOAT  */
-#line 80 "src/parser.y"
-            { (yyval.node) = makeAstNode("Type", {}, "float"); }
-#line 1565 "build/parser.tab.cc"
-    break;
-
-  case 14: /* Type: VOID  */
-#line 81 "src/parser.y"
-           { (yyval.node) = makeAstNode("Type", {}, "void"); }
-#line 1571 "build/parser.tab.cc"
-    break;
-
-  case 15: /* FuncDef: Type ID LP ParamListOpt RP Block  */
-#line 85 "src/parser.y"
-                                       { (yyval.node) = makeAstNode("FuncDef", {(yyvsp[-5].node), makeAstNode("Name", {}, sval((yyvsp[-4].str))), (yyvsp[-2].node), (yyvsp[0].node)}); free((yyvsp[-4].str)); }
-#line 1577 "build/parser.tab.cc"
-    break;
-
-  case 16: /* ParamListOpt: %empty  */
-#line 89 "src/parser.y"
-                  { (yyval.node) = makeAstNode("Params", {}); }
-#line 1583 "build/parser.tab.cc"
-    break;
-
-  case 17: /* ParamListOpt: ParamList  */
-#line 90 "src/parser.y"
+  case 13: /* ArrayDimsOpt: ArrayDims  */
+#line 83 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
                 { (yyval.node) = (yyvsp[0].node); }
-#line 1589 "build/parser.tab.cc"
+#line 1582 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 18: /* ParamList: ParamList COMMA Param  */
-#line 94 "src/parser.y"
-                            { (yyval.node) = makeAstNode("Params", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1595 "build/parser.tab.cc"
+  case 14: /* ArrayDims: ArrayDims LB Exp RB  */
+#line 87 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("ArrayDims", {(yyvsp[-3].node), (yyvsp[-1].node)}, "ArrayDims", currentLine()); }
+#line 1588 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 19: /* ParamList: Param  */
-#line 95 "src/parser.y"
-            { (yyval.node) = makeAstNode("Params", {(yyvsp[0].node)}); }
-#line 1601 "build/parser.tab.cc"
+  case 15: /* ArrayDims: LB Exp RB  */
+#line 88 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                { (yyval.node) = makeAstNode("ArrayDims", {(yyvsp[-1].node)}, "ArrayDims", currentLine()); }
+#line 1594 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 20: /* Param: Type ID  */
-#line 99 "src/parser.y"
-              { (yyval.node) = makeAstNode("Param", {(yyvsp[-1].node), makeAstNode("Name", {}, sval((yyvsp[0].str)))}); free((yyvsp[0].str)); }
-#line 1607 "build/parser.tab.cc"
+  case 16: /* Type: INT  */
+#line 92 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+          { (yyval.node) = makeAstNode("Type", {}, "int", currentLine()); }
+#line 1600 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 21: /* Block: LC BlockItems RC  */
-#line 103 "src/parser.y"
-                       { (yyval.node) = makeAstNode("Block", {(yyvsp[-1].node)}); }
-#line 1613 "build/parser.tab.cc"
+  case 17: /* Type: FLOAT  */
+#line 93 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+            { (yyval.node) = makeAstNode("Type", {}, "float", currentLine()); }
+#line 1606 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 22: /* BlockItems: BlockItems BlockItem  */
-#line 107 "src/parser.y"
-                           { (yyval.node) = makeAstNode("BlockItems", {(yyvsp[-1].node), (yyvsp[0].node)}); }
-#line 1619 "build/parser.tab.cc"
+  case 18: /* Type: VOID  */
+#line 94 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+           { (yyval.node) = makeAstNode("Type", {}, "void", currentLine()); }
+#line 1612 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 23: /* BlockItems: %empty  */
-#line 108 "src/parser.y"
-                  { (yyval.node) = makeAstNode("BlockItems", {}); }
-#line 1625 "build/parser.tab.cc"
+  case 19: /* FuncDef: Type ID LP ParamListOpt RP Block  */
+#line 98 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                                       { (yyval.node) = makeAstNode("FuncDef", {(yyvsp[-5].node), makeAstNode("Name", {}, sval((yyvsp[-4].str)), currentLine()), (yyvsp[-2].node), (yyvsp[0].node)}, "FuncDef", currentLine()); free((yyvsp[-4].str)); }
+#line 1618 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 24: /* BlockItem: VarDecl  */
-#line 112 "src/parser.y"
+  case 20: /* ParamListOpt: %empty  */
+#line 102 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                  { (yyval.node) = makeAstNode("Params", {}, "Params", currentLine()); }
+#line 1624 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 21: /* ParamListOpt: ParamList  */
+#line 103 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                { (yyval.node) = (yyvsp[0].node); }
+#line 1630 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 22: /* ParamList: ParamList COMMA Param  */
+#line 107 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                            { (yyval.node) = makeAstNode("Params", (yyvsp[-2].node)->children, "Params", currentLine()); (yyval.node)->children.push_back((yyvsp[0].node)); }
+#line 1636 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 23: /* ParamList: Param  */
+#line 108 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+            { (yyval.node) = makeAstNode("Params", {(yyvsp[0].node)}, "Params", currentLine()); }
+#line 1642 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 24: /* Param: Type ID  */
+#line 112 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+              { (yyval.node) = makeAstNode("Param", {(yyvsp[-1].node), makeAstNode("Name", {}, sval((yyvsp[0].str)), currentLine()), makeAstNode("ArrayDims", {}, "ArrayDims", currentLine())}, "Param", currentLine()); free((yyvsp[0].str)); }
+#line 1648 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 25: /* Param: Type ID ArrayDimsOpt  */
+#line 113 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                           { (yyval.node) = makeAstNode("Param", {(yyvsp[-2].node), makeAstNode("Name", {}, sval((yyvsp[-1].str)), currentLine()), (yyvsp[0].node)}, "Param", currentLine()); free((yyvsp[-1].str)); }
+#line 1654 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 26: /* Block: LC BlockItems RC  */
+#line 117 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                       { (yyval.node) = makeAstNode("Block", {(yyvsp[-1].node)}, "Block", currentLine()); }
+#line 1660 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 27: /* BlockItems: BlockItems BlockItem  */
+#line 121 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                           { (yyval.node) = makeAstNode("BlockItems", (yyvsp[-1].node)->children, "BlockItems", currentLine()); (yyval.node)->children.push_back((yyvsp[0].node)); }
+#line 1666 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 28: /* BlockItems: %empty  */
+#line 122 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                  { (yyval.node) = makeAstNode("BlockItems", {}, "BlockItems", currentLine()); }
+#line 1672 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 29: /* BlockItem: VarDecl  */
+#line 126 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
               { (yyval.node) = (yyvsp[0].node); }
-#line 1631 "build/parser.tab.cc"
+#line 1678 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 25: /* BlockItem: Stmt  */
-#line 113 "src/parser.y"
+  case 30: /* BlockItem: Stmt  */
+#line 127 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
            { (yyval.node) = (yyvsp[0].node); }
-#line 1637 "build/parser.tab.cc"
+#line 1684 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 26: /* Stmt: SEMICOLON  */
-#line 117 "src/parser.y"
-                { (yyval.node) = makeAstNode("EmptyStmt", {}); }
-#line 1643 "build/parser.tab.cc"
+  case 31: /* Stmt: SEMICOLON  */
+#line 131 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                { (yyval.node) = makeAstNode("EmptyStmt", {}, "EmptyStmt", currentLine()); }
+#line 1690 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 27: /* Stmt: Exp SEMICOLON  */
-#line 118 "src/parser.y"
-                    { (yyval.node) = makeAstNode("ExprStmt", {(yyvsp[-1].node)}); }
-#line 1649 "build/parser.tab.cc"
+  case 32: /* Stmt: Exp SEMICOLON  */
+#line 132 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                    { (yyval.node) = makeAstNode("ExprStmt", {(yyvsp[-1].node)}, "ExprStmt", currentLine()); }
+#line 1696 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 28: /* Stmt: RETURN Exp SEMICOLON  */
-#line 119 "src/parser.y"
-                           { (yyval.node) = makeAstNode("Return", {(yyvsp[-1].node)}); }
-#line 1655 "build/parser.tab.cc"
+  case 33: /* Stmt: RETURN Exp SEMICOLON  */
+#line 133 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                           { (yyval.node) = makeAstNode("Return", {(yyvsp[-1].node)}, "Return", currentLine()); }
+#line 1702 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 29: /* Stmt: IF LP Exp RP Stmt  */
-#line 120 "src/parser.y"
-                        { (yyval.node) = makeAstNode("If", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1661 "build/parser.tab.cc"
+  case 34: /* Stmt: IF LP Exp RP Stmt  */
+#line 134 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("If", {(yyvsp[-2].node), (yyvsp[0].node)}, "If", currentLine()); }
+#line 1708 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 30: /* Stmt: IF LP Exp RP Stmt ELSE Stmt  */
-#line 121 "src/parser.y"
-                                  { (yyval.node) = makeAstNode("IfElse", {(yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1667 "build/parser.tab.cc"
+  case 35: /* Stmt: IF LP Exp RP Stmt ELSE Stmt  */
+#line 135 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                                  { (yyval.node) = makeAstNode("IfElse", {(yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[0].node)}, "IfElse", currentLine()); }
+#line 1714 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 31: /* Stmt: WHILE LP Exp RP Stmt  */
-#line 122 "src/parser.y"
-                           { (yyval.node) = makeAstNode("While", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1673 "build/parser.tab.cc"
+  case 36: /* Stmt: WHILE LP Exp RP Stmt  */
+#line 136 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                           { (yyval.node) = makeAstNode("While", {(yyvsp[-2].node), (yyvsp[0].node)}, "While", currentLine()); }
+#line 1720 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 32: /* Stmt: BREAK SEMICOLON  */
-#line 123 "src/parser.y"
-                      { (yyval.node) = makeAstNode("Break", {}); }
-#line 1679 "build/parser.tab.cc"
+  case 37: /* Stmt: BREAK SEMICOLON  */
+#line 137 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("Break", {}, "Break", currentLine()); }
+#line 1726 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 33: /* Stmt: CONTINUE SEMICOLON  */
-#line 124 "src/parser.y"
-                         { (yyval.node) = makeAstNode("Continue", {}); }
-#line 1685 "build/parser.tab.cc"
+  case 38: /* Stmt: CONTINUE SEMICOLON  */
+#line 138 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                         { (yyval.node) = makeAstNode("Continue", {}, "Continue", currentLine()); }
+#line 1732 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 34: /* Stmt: Block  */
-#line 125 "src/parser.y"
+  case 39: /* Stmt: Block  */
+#line 139 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
             { (yyval.node) = (yyvsp[0].node); }
-#line 1691 "build/parser.tab.cc"
+#line 1738 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 35: /* Exp: ID ASSIGN Exp  */
-#line 129 "src/parser.y"
-                    { (yyval.node) = makeAstNode("Assign", {makeAstNode("Name", {}, sval((yyvsp[-2].str))), (yyvsp[0].node)}); free((yyvsp[-2].str)); }
-#line 1697 "build/parser.tab.cc"
+  case 40: /* Exp: LVal ASSIGN Exp  */
+#line 143 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("Assign", {(yyvsp[-2].node), (yyvsp[0].node)}, "Assign", currentLine()); }
+#line 1744 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 36: /* Exp: LOrExp  */
-#line 130 "src/parser.y"
+  case 41: /* Exp: LOrExp  */
+#line 144 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 1703 "build/parser.tab.cc"
+#line 1750 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 37: /* LOrExp: LOrExp OR LAndExp  */
-#line 134 "src/parser.y"
-                        { (yyval.node) = makeAstNode("||", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1709 "build/parser.tab.cc"
+  case 42: /* LVal: ID  */
+#line 148 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+         { (yyval.node) = makeAstNode("Name", {}, sval((yyvsp[0].str)), currentLine()); free((yyvsp[0].str)); }
+#line 1756 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 38: /* LOrExp: LAndExp  */
-#line 135 "src/parser.y"
+  case 43: /* LVal: ID ArrayDimsOpt  */
+#line 149 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("Name", {(yyvsp[0].node)}, sval((yyvsp[-1].str)), currentLine()); free((yyvsp[-1].str)); }
+#line 1762 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 44: /* LOrExp: LOrExp OR LAndExp  */
+#line 153 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("||", {(yyvsp[-2].node), (yyvsp[0].node)}, "||", currentLine()); }
+#line 1768 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
+    break;
+
+  case 45: /* LOrExp: LAndExp  */
+#line 154 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
               { (yyval.node) = (yyvsp[0].node); }
-#line 1715 "build/parser.tab.cc"
+#line 1774 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 39: /* LAndExp: LAndExp AND EqExp  */
-#line 139 "src/parser.y"
-                        { (yyval.node) = makeAstNode("&&", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1721 "build/parser.tab.cc"
+  case 46: /* LAndExp: LAndExp AND EqExp  */
+#line 158 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("&&", {(yyvsp[-2].node), (yyvsp[0].node)}, "&&", currentLine()); }
+#line 1780 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 40: /* LAndExp: EqExp  */
-#line 140 "src/parser.y"
+  case 47: /* LAndExp: EqExp  */
+#line 159 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
             { (yyval.node) = (yyvsp[0].node); }
-#line 1727 "build/parser.tab.cc"
+#line 1786 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 41: /* EqExp: EqExp EQ RelExp  */
-#line 144 "src/parser.y"
-                      { (yyval.node) = makeAstNode("==", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1733 "build/parser.tab.cc"
+  case 48: /* EqExp: EqExp EQ RelExp  */
+#line 163 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("==", {(yyvsp[-2].node), (yyvsp[0].node)}, "==", currentLine()); }
+#line 1792 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 42: /* EqExp: EqExp NE RelExp  */
-#line 145 "src/parser.y"
-                      { (yyval.node) = makeAstNode("!=", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1739 "build/parser.tab.cc"
+  case 49: /* EqExp: EqExp NE RelExp  */
+#line 164 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                      { (yyval.node) = makeAstNode("!=", {(yyvsp[-2].node), (yyvsp[0].node)}, "!=", currentLine()); }
+#line 1798 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 43: /* EqExp: RelExp  */
-#line 146 "src/parser.y"
+  case 50: /* EqExp: RelExp  */
+#line 165 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 1745 "build/parser.tab.cc"
+#line 1804 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 44: /* RelExp: RelExp LT AddExp  */
-#line 150 "src/parser.y"
-                       { (yyval.node) = makeAstNode("<", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1751 "build/parser.tab.cc"
+  case 51: /* RelExp: RelExp LT AddExp  */
+#line 169 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                       { (yyval.node) = makeAstNode("<", {(yyvsp[-2].node), (yyvsp[0].node)}, "<", currentLine()); }
+#line 1810 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 45: /* RelExp: RelExp LE AddExp  */
-#line 151 "src/parser.y"
-                       { (yyval.node) = makeAstNode("<=", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1757 "build/parser.tab.cc"
+  case 52: /* RelExp: RelExp LE AddExp  */
+#line 170 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                       { (yyval.node) = makeAstNode("<=", {(yyvsp[-2].node), (yyvsp[0].node)}, "<=", currentLine()); }
+#line 1816 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 46: /* RelExp: RelExp GT AddExp  */
-#line 152 "src/parser.y"
-                       { (yyval.node) = makeAstNode(">", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1763 "build/parser.tab.cc"
+  case 53: /* RelExp: RelExp GT AddExp  */
+#line 171 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                       { (yyval.node) = makeAstNode(">", {(yyvsp[-2].node), (yyvsp[0].node)}, ">", currentLine()); }
+#line 1822 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 47: /* RelExp: RelExp GE AddExp  */
-#line 153 "src/parser.y"
-                       { (yyval.node) = makeAstNode(">=", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1769 "build/parser.tab.cc"
+  case 54: /* RelExp: RelExp GE AddExp  */
+#line 172 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                       { (yyval.node) = makeAstNode(">=", {(yyvsp[-2].node), (yyvsp[0].node)}, ">=", currentLine()); }
+#line 1828 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 48: /* RelExp: AddExp  */
-#line 154 "src/parser.y"
+  case 55: /* RelExp: AddExp  */
+#line 173 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 1775 "build/parser.tab.cc"
+#line 1834 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 49: /* AddExp: AddExp ADD MulExp  */
-#line 158 "src/parser.y"
-                        { (yyval.node) = makeAstNode("+", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1781 "build/parser.tab.cc"
+  case 56: /* AddExp: AddExp ADD MulExp  */
+#line 177 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("+", {(yyvsp[-2].node), (yyvsp[0].node)}, "+", currentLine()); }
+#line 1840 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 50: /* AddExp: AddExp MINUS MulExp  */
-#line 159 "src/parser.y"
-                          { (yyval.node) = makeAstNode("-", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1787 "build/parser.tab.cc"
+  case 57: /* AddExp: AddExp MINUS MulExp  */
+#line 178 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("-", {(yyvsp[-2].node), (yyvsp[0].node)}, "-", currentLine()); }
+#line 1846 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 51: /* AddExp: MulExp  */
-#line 160 "src/parser.y"
+  case 58: /* AddExp: MulExp  */
+#line 179 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
              { (yyval.node) = (yyvsp[0].node); }
-#line 1793 "build/parser.tab.cc"
+#line 1852 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 52: /* MulExp: MulExp MUL UnaryExp  */
-#line 164 "src/parser.y"
-                          { (yyval.node) = makeAstNode("*", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1799 "build/parser.tab.cc"
+  case 59: /* MulExp: MulExp MUL UnaryExp  */
+#line 183 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("*", {(yyvsp[-2].node), (yyvsp[0].node)}, "*", currentLine()); }
+#line 1858 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 53: /* MulExp: MulExp DIV UnaryExp  */
-#line 165 "src/parser.y"
-                          { (yyval.node) = makeAstNode("/", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1805 "build/parser.tab.cc"
+  case 60: /* MulExp: MulExp DIV UnaryExp  */
+#line 184 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("/", {(yyvsp[-2].node), (yyvsp[0].node)}, "/", currentLine()); }
+#line 1864 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 54: /* MulExp: MulExp MOD UnaryExp  */
-#line 166 "src/parser.y"
-                          { (yyval.node) = makeAstNode("%", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1811 "build/parser.tab.cc"
+  case 61: /* MulExp: MulExp MOD UnaryExp  */
+#line 185 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("%", {(yyvsp[-2].node), (yyvsp[0].node)}, "%", currentLine()); }
+#line 1870 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 55: /* MulExp: UnaryExp  */
-#line 167 "src/parser.y"
+  case 62: /* MulExp: UnaryExp  */
+#line 186 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
                { (yyval.node) = (yyvsp[0].node); }
-#line 1817 "build/parser.tab.cc"
+#line 1876 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 56: /* UnaryExp: PrimaryExp  */
-#line 171 "src/parser.y"
+  case 63: /* UnaryExp: PrimaryExp  */
+#line 190 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
                  { (yyval.node) = (yyvsp[0].node); }
-#line 1823 "build/parser.tab.cc"
+#line 1882 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 57: /* UnaryExp: MINUS UnaryExp  */
-#line 172 "src/parser.y"
-                                  { (yyval.node) = makeAstNode("neg", {(yyvsp[0].node)}); }
-#line 1829 "build/parser.tab.cc"
+  case 64: /* UnaryExp: MINUS UnaryExp  */
+#line 191 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                                  { (yyval.node) = makeAstNode("neg", {(yyvsp[0].node)}, "neg", currentLine()); }
+#line 1888 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 58: /* UnaryExp: NOT UnaryExp  */
-#line 173 "src/parser.y"
-                   { (yyval.node) = makeAstNode("!", {(yyvsp[0].node)}); }
-#line 1835 "build/parser.tab.cc"
+  case 65: /* UnaryExp: NOT UnaryExp  */
+#line 192 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                   { (yyval.node) = makeAstNode("!", {(yyvsp[0].node)}, "!", currentLine()); }
+#line 1894 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 59: /* UnaryExp: TILDE UnaryExp  */
-#line 174 "src/parser.y"
-                     { (yyval.node) = makeAstNode("~", {(yyvsp[0].node)}); }
-#line 1841 "build/parser.tab.cc"
+  case 66: /* UnaryExp: TILDE UnaryExp  */
+#line 193 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                     { (yyval.node) = makeAstNode("~", {(yyvsp[0].node)}, "~", currentLine()); }
+#line 1900 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 60: /* UnaryExp: ID LP ArgListOpt RP  */
-#line 175 "src/parser.y"
-                          { (yyval.node) = makeAstNode("Call", {makeAstNode("Name", {}, sval((yyvsp[-3].str))), (yyvsp[-1].node)}); free((yyvsp[-3].str)); }
-#line 1847 "build/parser.tab.cc"
+  case 67: /* UnaryExp: ID LP ArgListOpt RP  */
+#line 194 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                          { (yyval.node) = makeAstNode("Call", {makeAstNode("Name", {}, sval((yyvsp[-3].str)), currentLine()), (yyvsp[-1].node)}, "Call", currentLine()); free((yyvsp[-3].str)); }
+#line 1906 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 61: /* ArgListOpt: %empty  */
-#line 179 "src/parser.y"
-                  { (yyval.node) = makeAstNode("Args", {}); }
-#line 1853 "build/parser.tab.cc"
+  case 68: /* ArgListOpt: %empty  */
+#line 198 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                  { (yyval.node) = makeAstNode("Args", {}, "Args", currentLine()); }
+#line 1912 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 62: /* ArgListOpt: ArgList  */
-#line 180 "src/parser.y"
+  case 69: /* ArgListOpt: ArgList  */
+#line 199 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
               { (yyval.node) = (yyvsp[0].node); }
-#line 1859 "build/parser.tab.cc"
+#line 1918 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 63: /* ArgList: ArgList COMMA Exp  */
-#line 184 "src/parser.y"
-                        { (yyval.node) = makeAstNode("Args", {(yyvsp[-2].node), (yyvsp[0].node)}); }
-#line 1865 "build/parser.tab.cc"
+  case 70: /* ArgList: ArgList COMMA Exp  */
+#line 203 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                        { (yyval.node) = makeAstNode("Args", (yyvsp[-2].node)->children, "Args", currentLine()); (yyval.node)->children.push_back((yyvsp[0].node)); }
+#line 1924 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 64: /* ArgList: Exp  */
-#line 185 "src/parser.y"
-          { (yyval.node) = makeAstNode("Args", {(yyvsp[0].node)}); }
-#line 1871 "build/parser.tab.cc"
+  case 71: /* ArgList: Exp  */
+#line 204 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+          { (yyval.node) = makeAstNode("Args", {(yyvsp[0].node)}, "Args", currentLine()); }
+#line 1930 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 65: /* PrimaryExp: LP Exp RP  */
-#line 189 "src/parser.y"
+  case 72: /* PrimaryExp: LP Exp RP  */
+#line 208 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
                 { (yyval.node) = (yyvsp[-1].node); }
-#line 1877 "build/parser.tab.cc"
+#line 1936 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 66: /* PrimaryExp: ID  */
-#line 190 "src/parser.y"
-         { (yyval.node) = makeAstNode("Name", {}, sval((yyvsp[0].str))); free((yyvsp[0].str)); }
-#line 1883 "build/parser.tab.cc"
+  case 73: /* PrimaryExp: LVal  */
+#line 209 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+           { (yyval.node) = (yyvsp[0].node); }
+#line 1942 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 67: /* PrimaryExp: INT_LIT  */
-#line 191 "src/parser.y"
-              { (yyval.node) = makeAstNode("Int", {}, sval((yyvsp[0].str))); free((yyvsp[0].str)); }
-#line 1889 "build/parser.tab.cc"
+  case 74: /* PrimaryExp: INT_LIT  */
+#line 210 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+              { (yyval.node) = makeAstNode("Int", {}, sval((yyvsp[0].str)), currentLine()); free((yyvsp[0].str)); }
+#line 1948 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
-  case 68: /* PrimaryExp: FLOAT_LIT  */
-#line 192 "src/parser.y"
-                { (yyval.node) = makeAstNode("Float", {}, sval((yyvsp[0].str))); free((yyvsp[0].str)); }
-#line 1895 "build/parser.tab.cc"
+  case 75: /* PrimaryExp: FLOAT_LIT  */
+#line 211 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
+                { (yyval.node) = makeAstNode("Float", {}, sval((yyvsp[0].str)), currentLine()); free((yyvsp[0].str)); }
+#line 1954 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
     break;
 
 
-#line 1899 "build/parser.tab.cc"
+#line 1958 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.cc"
 
       default: break;
     }
@@ -2119,7 +2178,7 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 195 "src/parser.y"
+#line 214 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
 
 
 int yylex() { return g_scanner ? g_scanner->yylex() : 0; }
@@ -2136,6 +2195,15 @@ int main(int argc, char** argv) {
     g_scanner = &scanner;
     int ret = yyparse();
     if (ret == 0 && g_root) {
+#ifndef DISABLE_SEMANTIC_CHECK
+        ErrReporter reporter;
+        Checker checker(reporter);
+        checker.check(g_root);
+        if (reporter.hasError()) {
+            reporter.print();
+            return 1;
+        }
+#endif
         printAst(g_root);
         return 0;
     }

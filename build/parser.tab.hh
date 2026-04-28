@@ -35,8 +35,8 @@
    especially those whose name start with YY_ or yy_.  They are
    private implementation details that can be changed or removed.  */
 
-#ifndef YY_YY_BUILD_PARSER_TAB_HH_INCLUDED
-# define YY_YY_BUILD_PARSER_TAB_HH_INCLUDED
+#ifndef YY_YY_USERS_ST4RGAZER_CODE_PROJECT_SYSY2026_COMPILER_BUILD_PARSER_TAB_HH_INCLUDED
+# define YY_YY_USERS_ST4RGAZER_CODE_PROJECT_SYSY2026_COMPILER_BUILD_PARSER_TAB_HH_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -45,11 +45,11 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 1 "src/parser.y"
+#line 1 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
 
-#include "ast.h"
+#include "ast.hpp"
 
-#line 53 "build/parser.tab.hh"
+#line 53 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.hh"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -109,10 +109,10 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 30 "src/parser.y"
+#line 33 "/Users/st4rgazer/Code/project/sysy2026-compiler/src/parser.y"
  char* str; ASTNode* node; 
 
-#line 116 "build/parser.tab.hh"
+#line 116 "/Users/st4rgazer/Code/project/sysy2026-compiler/build/parser.tab.hh"
 
 };
 typedef union YYSTYPE YYSTYPE;
@@ -127,4 +127,4 @@ extern YYSTYPE yylval;
 int yyparse (void);
 
 
-#endif /* !YY_YY_BUILD_PARSER_TAB_HH_INCLUDED  */
+#endif /* !YY_YY_USERS_ST4RGAZER_CODE_PROJECT_SYSY2026_COMPILER_BUILD_PARSER_TAB_HH_INCLUDED  */
