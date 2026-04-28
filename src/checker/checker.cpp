@@ -1,463 +1,495 @@
 #include "../../include/checker/checker.hpp"
 
-#include <utility>
+/* 静态语义分析
+ 1. Redefined Variable 变量重复定义/函数形参重复定义
+ 2. Redefined Function 函数重复定义
+ 3. Use Undefined Variable 使用未定义变量
+ 4. Use Undefined Function 使用未定义函数
+ 5. Can not Match Function Parameters 函数参数/类型不匹配
+ 6. Func return type not match 函数返回值类型不匹配,
+ 例如函数返回类型void/float时，函数内出现带返回值为int的return语句
+ 7. Array index not int 数组下标不是整数
+ 8. Break not in loop break语句不在循环中
+ 9. Continue not in loop continue语句不在循环中
+ 10. Visit non-array variable in the form of subscript variables
+ 对非数组变量采用下标变量的形式访问
+*/
 
-using namespace std;
-
-namespace {
-struct ScopeGuard {
-    Checker& checker;
-    explicit ScopeGuard(Checker& c) : checker(c) {}
-    ~ScopeGuard() = default;
-};
-
-static TYPE parseBaseType(ASTNode* node) {
-    if (!node) return VOID_TYPE;
-    if (node->value == "int") return INT_TYPE;
-    if (node->value == "float") return FLOAT_TYPE;
-    return VOID_TYPE;
+/**
+ * @brief 访问CompUnitAST节点检测语义
+ *
+ * @description:
+ * 访问CompUnitAST节点检测语义，注意创建新的表项，遍历所有的变量及函数定义
+ * @param {CompUnitAST&} ast - 单元类，也是语法树的根节点
+ */
+void Checker::visit(CompUnitAST &ast) {
+  //创建新的表项
+  make_new_table();
+  for (auto &decl : ast.declDefList) {
+    decl->accept(*this);
+  }
 }
 
-static int countArrayDims(ASTNode* node) {
-    if (!node || node->name != "ArrayDims") return 0;
-    int dim = 0;
-    for (auto* child : node->children) {
-        if (!child) continue;
-        if (child->name == "ArrayDims") dim += countArrayDims(child);
-        else ++dim;
+/**
+ * @brief 访问DeclDefAST节点检测语义
+ *
+ * @description: 访问当前的变量声明节点或函数定义节点
+ * @param {DeclDefAST&} ast - 声明和函数定义类
+ */
+void Checker::visit(DeclDefAST &ast) {
+  if (ast.Decl) {
+    ast.Decl->accept(*this);
+  }
+  if (ast.funcDef) {
+    ast.funcDef->accept(*this);
+  }
+}
+
+/**
+ * @brief 访问DeclAST节点检测语义
+ *
+ * @description:
+ * 访问变量声明，并将所有变量插入到符号表中，注意变量不能重复分配。
+ * @param {DeclDefAST&} ast - 声明和函数定义类
+ */
+void Checker::visit(DeclAST &ast) {
+  for (auto &def : ast.defList) {
+    def->accept(*this);
+  }
+  // 将定义的变量插入符号表
+  if (!InsertVar(ast)) {
+    exit(int(ErrorType::VarDuplicated));
+  }
+}
+
+/**
+ * @brief 访问DefAST节点检测语义
+ *
+ * @description: 访问定义AST节点并进行语义检查
+ *
+ * @param {DefAST&} ast - 定义AST节点
+ */
+void Checker::visit(DefAST &ast) {
+  if (ast.initVal) {
+    ast.initVal->accept(*this);
+  }
+}
+
+/**
+ * @brief 访问InitValAST节点检测语义
+ *
+ * @description: 访问初始化值AST节点并进行语义检查
+ *
+ * @param {InitValAST&} ast - 初始化值AST节点
+ */
+
+void Checker::visit(InitValAST &ast) {
+  if (ast.exp) {
+    ast.exp->accept(*this);
+  } else {
+    for (auto &initVal : ast.initValList) {
+      initVal->accept(*this);
     }
-    return dim;
+  }
 }
 
-static TypeInfo buildType(TYPE base, int dim) {
-    return TypeInfo{base, dim > 0, dim};
-}
+/**
+ * @brief 访问FuncFParamAST节点检测语义
+ *
+ * @description: 访问函数形参AST节点并进行语义检查
+ *
+ * @param {FuncFParamAST&} ast - 函数形参AST节点
+ */
 
-static bool sameTypeExact(const TypeInfo& a, const TypeInfo& b) {
-    return a.baseType == b.baseType && a.isArray == b.isArray && a.arrayDim == b.arrayDim;
-}
-
-static bool isNumericType(const TypeInfo& type) {
-    return !type.isArray && (type.baseType == INT_TYPE || type.baseType == FLOAT_TYPE);
-}
-
-static bool isIntType(const TypeInfo& type) {
-    return !type.isArray && type.baseType == INT_TYPE;
-}
-
-static ASTNode* child(ASTNode* node, size_t index) {
-    return node && index < node->children.size() ? node->children[index] : nullptr;
-}
-} // namespace
-
-Checker::Checker(ErrReporter& reporter) : reporter_(reporter) {}
-
-void Checker::check(ASTNode* root) {
-    if (!root) return;
-    pushScope();
-    checkCompUnit(root);
-    popScope();
-}
-
-void Checker::pushScope() { scopes_.emplace_back(); }
-
-void Checker::popScope() {
-    if (!scopes_.empty()) scopes_.pop_back();
-}
-
-bool Checker::declareSymbol(const string& name, const Symbol& symbol) {
-    if (scopes_.empty()) pushScope();
-    auto& scope = scopes_.back();
-    if (scope.count(name)) return false;
-    scope[name] = symbol;
-    return true;
-}
-
-const Checker::Symbol* Checker::lookupSymbol(const string& name) const {
-    for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
-        auto found = it->find(name);
-        if (found != it->end()) return &found->second;
+void Checker::visit(FuncFParamAST &ast) {
+  for (auto &exp : ast.arrays) {
+    if (exp) {
+      exp->accept(*this);
     }
-    return nullptr;
+  }
 }
 
-FunctionInfo* Checker::lookupFunction(const string& name) {
-    auto it = functions_.find(name);
-    return it == functions_.end() ? nullptr : &it->second;
+/**
+ *  @brief 访问ReturnStmtAST节点检测语义
+ *
+ *  @description:
+ * 遍历ReturnStmtAST节点，并通过符号表table检测函数返回类型是否与return语句的返回值类型相同。
+ *
+ *  @param {ReturnStmtAST&} ast - 返回语句的AST节点
+ **/
+void Checker::visit(ReturnStmtAST &ast) {
+  if (ast.exp) {
+    ast.exp->accept(*this);
+  } else {
+    this->current_type.type = TYPE::TYPE_VOID;
+  }
+
+  auto entry = find_func();
+  if (entry->type != this->current_type.type) {
+    err.error(ErrorType::FuncReturnTypeNotMatch, "return");
+    exit(int(ErrorType::FuncReturnTypeNotMatch));
+  }
 }
 
-const FunctionInfo* Checker::lookupFunction(const string& name) const {
-    auto it = functions_.find(name);
-    return it == functions_.end() ? nullptr : &it->second;
+/**
+ *  @brief 访问FuncDefAST节点检测语义
+ *
+ *  @description:
+ *将函数插入到符号表中，注意函数不能重复定义，同时进入新函数作用域
+ *
+ *  @param {FuncDefAST&} ast - 函数定义AST节点
+ **/
+void Checker::visit(FuncDefAST &ast) {
+  // 将函数插入符号表
+  if (!InsertFunc(ast)) {
+    err.error(ErrorType::FuncDuplicated, *ast.id);
+    exit(int(ErrorType::FuncDuplicated));
+  }
+  start_of_new_func = true;
+  ast.block->accept(*this);
 }
 
-void Checker::report(const string& message, ASTNode* node) const {
-    reporter_.report(nodeLine(node), message);
+/**
+ * @brief 访问BlockAST节点进行语义检查
+ *
+ * @description:
+ * 对于函数体块，检查函数体内的语句和变量定义，包括语义分析和作用域控制。
+ * @param {BlockAST&} ast - 函数体块类
+ */
+void Checker::visit(BlockAST &ast) {
+  //一个新的函数在插入时就已经建了新的符号表，这里不用重复建
+  if (start_of_new_func)
+    start_of_new_func = false;
+  //对非函数定义的语句块添加新的符号表
+  else
+    make_new_table();
+
+  for (auto &item : ast.blockItemList) {
+    item->is_inloop = ast.is_inloop;
+    item->accept(*this);
+  }
+
+  //语句块作用域结束，删除之前添加的符号表
+  delete_table();
 }
 
-int Checker::nodeLine(ASTNode* node) {
-    return node ? node->line : 0;
+/**
+ * @brief 访问BlockItemAST节点进行语义检查
+ *
+ * @description: 对函数体块中的单个语句或变量定义进行语义分析。
+ * @param {BlockItemAST&} ast - 函数体块内的单个语句或变量定义
+ */
+void Checker::visit(BlockItemAST &ast) {
+
+  if (ast.stmt) {
+    ast.stmt->is_inloop = ast.is_inloop;
+    ast.stmt->accept(*this);
+  }
+  if (ast.decl) {
+    ast.decl->accept(*this);
+  }
 }
 
-TypeInfo Checker::makeType(TYPE baseType, bool isArray, int dim) {
-    return TypeInfo{baseType, isArray, dim};
-}
+/**
+ * @brief 访问StmtAST节点进行语义检查
+ *
+ * @description:
+ * 对语句进行语义分析，包括处理返回语句、选择语句、循环语句和表达式等。注意break和continue语句在循环中。
+ * @param {StmtAST&} ast - 语句类
+ */
+void Checker::visit(StmtAST &ast) {
 
-string Checker::typeName(const TypeInfo& type) {
-    string name = type.baseType == INT_TYPE ? "int" : type.baseType == FLOAT_TYPE ? "float" : "void";
-    for (int i = 0; i < type.arrayDim; ++i) name += "[]";
-    return name;
-}
+  if (ast.selectStmt) {
+    ast.selectStmt->is_inloop = ast.is_inloop;
+    ast.selectStmt->accept(*this);
+  }
+  if (ast.block) {
+    ast.block->is_inloop = ast.is_inloop;
+    ast.block->accept(*this);
+  }
+  if (ast.iterationStmt) {
+    ast.iterationStmt->is_inloop = ast.is_inloop;
+    ast.iterationStmt->accept(*this);
+  }
 
-bool Checker::sameType(const TypeInfo& a, const TypeInfo& b) {
-    return sameTypeExact(a, b);
-}
+  if (ast.returnStmt) {
+    ast.returnStmt->accept(*this);
+  }  
+  if (ast.lVal) {
+    ast.lVal->accept(*this);
+  }
+  if (ast.exp) {
+    ast.exp->accept(*this);
+  }
 
-bool Checker::isIntLike(const TypeInfo& type) { return isIntType(type); }
-
-bool Checker::isNumeric(const TypeInfo& type) { return isNumericType(type); }
-
-bool Checker::isVoid(const TypeInfo& type) { return !type.isArray && type.baseType == VOID_TYPE; }
-
-bool Checker::isIntNumber(ASTNode* node) { return node && node->name == "Int"; }
-
-bool Checker::isFloatNumber(ASTNode* node) { return node && node->name == "Float"; }
-
-ASTNode* Checker::child(ASTNode* node, size_t index) {
-    return ::child(node, index);
-}
-
-void Checker::checkCompUnit(ASTNode* node) {
-    if (!node) return;
-    if (node->name == "CompUnit" || node->name == "ExtDefList" || node->name == "BlockItems") {
-        for (auto* item : node->children) {
-            if (!item) continue;
-            checkCompUnit(item);
-        }
-        return;
+  if (ast.sType == STYPE::BRE) { // 当前节点为Break语句类型
+    if (!ast.is_inloop) {
+      err.error(ErrorType::BreakNotInLoop, "break");
+      exit(int(ErrorType::BreakNotInLoop));
     }
-    if (node->name == "VarDecl") {
-        checkDecl(node);
-        return;
+  } else if (ast.sType == STYPE::CONT) { // 当前节点为Continue语句类型
+    if (!ast.is_inloop) {
+      err.error(ErrorType::ContinueNotInLoop, "continue");
+      exit(int(ErrorType::ContinueNotInLoop));
     }
-    if (node->name == "FuncDef") {
-        checkFuncDef(node);
-        return;
-    }
+  }
 }
 
-void Checker::checkDecl(ASTNode* node) {
-    if (!node || node->name != "VarDecl") return;
+/**
+ * @brief 访问SelectStmtAST节点进行语义检查
+ *
+ * @description:
+ * 对选择语句（if-else语句）进行语义分析，包括处理条件表达式、if分支和else分支。
+ * @param {SelectStmtAST&} ast - 选择语句类
+ */
+void Checker::visit(SelectStmtAST &ast) {
+  if (ast.elseStmt) {
+    ast.elseStmt->is_inloop = ast.is_inloop;
+    ast.elseStmt->accept(*this);
+  }
+  if (ast.ifStmt) {
+    ast.ifStmt->is_inloop = ast.is_inloop;
+    ast.ifStmt->accept(*this);
+  }
+  if (ast.cond) {
+    ast.cond->accept(*this);
+  }
+}
 
-    auto* typeNode = child(node, 0);
-    auto* listNode = child(node, 1);
-    TYPE baseType = parseBaseType(typeNode);
-    if (!listNode) return;
+/**
+ * @brief 访问IterationStmtAST节点进行语义检查
+ *
+ * @description: 对循环语句进行语义分析，包括处理循环条件和循环体。
+ * @param {IterationStmtAST&} ast - 循环语句类
+ */
+void Checker::visit(IterationStmtAST &ast) {
+  if (ast.cond) {
+    ast.cond->accept(*this);
+  }
+  if (ast.stmt) {
+    ast.stmt->is_inloop = true;
+    ast.stmt->accept(*this);
+  }
+}
 
-    auto handleVarDef = [&](ASTNode* defNode) {
-        if (!defNode) return;
-        auto* varNode = defNode->name == "InitVar" ? child(defNode, 0) : defNode;
-        auto* initNode = defNode->name == "InitVar" ? child(defNode, 1) : nullptr;
-        if (!varNode || (varNode->name != "Var" && varNode->name != "Name")) return;
+/**
+ * @brief 访问AddExpAST节点进行语义检查
+ *
+ * @description: 对加法表达式进行语义分析，处理加法运算。
+ * @param {AddExpAST&} ast - 加法表达式类
+ */
+void Checker::visit(AddExpAST &ast) {
+  if (ast.addExp) {
+    ast.addExp->accept(*this);
+  }
+  if (ast.mulExp) {
+    ast.mulExp->accept(*this);
+  }
+}
 
-        int dim = countArrayDims(child(varNode, 0));
-        TypeInfo type = buildType(baseType, dim);
-        if (!declareSymbol(varNode->value, Symbol{type, false})) {
-            report("Redefined Variable \"" + varNode->value + "\"", varNode);
-        }
+/**
+ * @brief 访问MulExpAST节点进行语义检查
+ *
+ * @description: 对乘法表达式进行语义分析，处理乘法运算。
+ * @param {MulExpAST&} ast - 乘法表达式类
+ */
+void Checker::visit(MulExpAST &ast) {
+  if (ast.mulExp) {
+    ast.mulExp->accept(*this);
+  }
+  if (ast.unaryExp) {
+    ast.unaryExp->accept(*this);
+  }
+}
 
-        if (initNode) {
-            auto initType = evalExpr(initNode);
-            if (initType.type.baseType == VOID_TYPE || initType.type.isArray) {
-                report("Func return type not match", initNode);
-            }
-        }
-    };
+/**
+ * @brief 访问UnaryExpAST节点进行语义检查
+ *
+ * @description:
+ * 对一元表达式进行语义分析，包括处理一元运算符、基本表达式和函数调用。
+ * @param {UnaryExpAST&} ast - 一元表达式类
+ */
+void Checker::visit(UnaryExpAST &ast) {
+  if (ast.primaryExp) {
+    ast.primaryExp->accept(*this);
+  }
+  if (ast.unaryExp) {
+    ast.unaryExp->accept(*this);
+  }
+  if (ast.call) {
+    ast.call->accept(*this);
+  }
+}
 
-    if (listNode->name == "VarDefList" || listNode->name == "VarDef" || listNode->name == "InitVar") {
-        if (listNode->name == "VarDefList") {
-            for (auto* def : listNode->children) handleVarDef(def);
+/**
+ * @brief 访问PrimaryExpAST节点进行语义检查
+ *
+ * @description: 对基本表达式进行语义分析，包括处理表达式、左值和常数。
+ * @param {PrimaryExpAST&} ast - 基本表达式类
+ */
+void Checker::visit(PrimaryExpAST &ast) {
+  if (ast.exp) {
+    ast.exp->accept(*this);
+  }
+  if (ast.lval) {
+    ast.lval->accept(*this);
+  }
+  if (ast.number) {
+    ast.number->accept(*this);
+  }
+}
+
+/**
+ * @brief 访问LValAST节点进行语义检查
+ *
+ * @description:
+ * 对左值表达式进行语义分析，包括数组下标检查、变量查找和访问控制。
+ * @param {LValAST&} ast - 左值表达式类
+ */
+void Checker::visit(LValAST &ast) {
+  for (auto &exp : ast.arrays) {
+    if (exp) {
+      exp->accept(*this);
+    }
+    // 左值数组下标不是整数
+    // 例如c[0.1] = 1;
+    if (!this->Expr_int) {
+      err.error(ErrorType::ArrayIndexNotInt, *ast.id);
+      exit(int(ErrorType::ArrayIndexNotInt));
+    }
+  }
+
+  auto str = ast.id.get();
+  //在符号表中查找对应变量
+  Entry *entry = Lookup(*str);
+  if (entry == nullptr) {
+    // 使用未定义变量
+    err.error(ErrorType::VarUnknown, *ast.id);
+    exit(int(ErrorType::VarUnknown));
+  }
+
+  // 对非数组变量采用下标变量的形式访问
+  // 例如 int c; c[10][10] = 10;
+  if (!entry->is_array && !ast.arrays.empty()) {
+    err.error(ErrorType::VisitVariableError, *ast.id);
+    exit(int(ErrorType::VisitVariableError));
+  }
+
+  this->current_type.type = entry->type;
+  this->Expr_int = (entry->type == TYPE::TYPE_INT);
+}
+
+void Checker::visit(NumberAST &ast) {
+  this->Expr_int = ast.isInt;
+  this->current_type.type = ast.isInt ? TYPE::TYPE_INT : TYPE::TYPE_FLOAT;
+}
+
+/**
+ * @brief 访问CallAST节点进行语义检查
+ *
+ * @description: 对函数调用进行语义分析，包括检查参数匹配和特殊函数处理。
+ * @param {CallAST&} ast - 函数调用类
+ */
+void Checker::visit(CallAST &ast) {
+  //特殊函数不做处理
+  if (!ast.id->compare("getint") || !ast.id->compare("getfloat") ||
+      !ast.id->compare("getch") || !ast.id->compare("getarray") ||
+      !ast.id->compare("get_float_array") || !ast.id->compare("putint") ||
+      !ast.id->compare("putfloat") || !ast.id->compare("putch") ||
+      !ast.id->compare("putarray") || !ast.id->compare("put_float_array")) {
+    return;
+  }
+
+  // 在符号表中查找对应函数
+  Entry *entry = Lookup(*ast.id);
+ 
+  if (entry == nullptr) {
+    err.error(ErrorType::FuncUnknown, *ast.id);
+    exit(int(ErrorType::FuncUnknown));
+ 
+  } else {
+    //参数长度不匹配
+    if (entry->func_params.size() != ast.funcCParamList.size()) {
+      err.error(ErrorType::FuncParamsNotMatch, *ast.id);
+      exit(int(ErrorType::FuncParamsNotMatch));
+     } else {
+      //遍历实参与形参
+      int i = 0;
+      for (auto &exp : ast.funcCParamList) {
+        exp->accept(*this);
+        if (this->current_type.type != entry->func_params[i].type) {
+          err.error(ErrorType::FuncParamsNotMatch, *ast.id);
+          exit(int(ErrorType::FuncParamsNotMatch));
         } else {
-            handleVarDef(listNode);
+          i++;
         }
-        return;
+      }
     }
-
-    for (auto* defNode : listNode->children) handleVarDef(defNode);
+    this->current_type.type = entry->type;
+    this->Expr_int = (entry->type == TYPE::TYPE_INT);
+  }
 }
 
-void Checker::checkFuncDef(ASTNode* node) {
-    if (!node) return;
-    auto* typeNode = child(node, 0);
-    auto* nameNode = child(node, 1);
-    auto* paramsNode = child(node, 2);
-    auto* blockNode = child(node, 3);
-    TYPE returnType = parseBaseType(typeNode);
-    if (!nameNode) return;
-
-    auto existing = lookupFunction(nameNode->value);
-    if (existing) {
-        if (existing->defined) {
-            report("Redefined Function \"" + nameNode->value + "\"", nameNode);
-            return;
-        }
-        existing->defined = true;
-        existing->returnType = returnType;
-    }
-
-    FunctionInfo info;
-    info.returnType = returnType;
-    info.defined = true;
-
-    vector<pair<string, TypeInfo>> params;
-    if (paramsNode && paramsNode->name == "Params") {
-        for (auto* param : paramsNode->children) {
-            if (!param || param->name != "Param") continue;
-            auto* pType = child(param, 0);
-            auto* pName = child(param, 1);
-            auto* pDims = child(param, 2);
-            if (!pName) continue;
-            TYPE pBase = parseBaseType(pType);
-            int dim = countArrayDims(pDims);
-            if (pDims && dim == 0) dim = 1;
-            TypeInfo pinfo = buildType(pBase, dim);
-            params.emplace_back(pName->value, pinfo);
-            info.params.push_back(pinfo);
-        }
-    }
-
-    functions_[nameNode->value] = info;
-
-    pushScope();
-    for (const auto& param : params) {
-        if (!declareSymbol(param.first, Symbol{param.second, false})) report("Redefined Variable \"" + param.first + "\"", nameNode);
-    }
-
-    auto savedReturn = currentReturnType_;
-    currentReturnType_ = returnType;
-    checkBlock(blockNode, false);
-    currentReturnType_ = savedReturn;
-    popScope();
+/**
+ * @brief 访问RelExpAST节点进行语义检查
+ *
+ * @description: 对关系表达式进行语义分析，确定表达式的类型。
+ * @param {RelExpAST&} ast - 关系表达式类
+ */
+void Checker::visit(RelExpAST &ast) {
+  if (ast.relExp) {
+    ast.relExp->accept(*this);
+  }
+  if (ast.addExp) {
+    ast.addExp->accept(*this);
+  }
+  this->Expr_int = false;
+  this->current_type.type = TYPE::TYPE_BOOL;
 }
 
-void Checker::checkBlock(ASTNode* node, bool createScope) {
-    if (!node) return;
-    if (createScope) pushScope();
-    for (auto* item : node->children) {
-        if (!item) continue;
-        if (item->name == "BlockItems") {
-            for (auto* nested : item->children) checkBlockItem(nested);
-        } else {
-            checkBlockItem(item);
-        }
-    }
-    if (createScope) popScope();
+/**
+ * @brief 访问EqExpAST节点进行语义检查
+ *
+ * @description: 对等式表达式进行语义分析，确定表达式的类型。
+ * @param {EqExpAST&} ast - 等式表达式类
+ */
+void Checker::visit(EqExpAST &ast) {
+  if (ast.eqExp) {
+    ast.eqExp->accept(*this);
+  }
+  if (ast.relExp) {
+    ast.relExp->accept(*this);
+  }
+  this->Expr_int = false;
+  this->current_type.type = TYPE::TYPE_BOOL;
 }
 
-void Checker::checkBlockItems(ASTNode* node) {
-    if (!node) return;
-    for (auto* item : node->children) {
-        if (!item) continue;
-        checkBlockItem(item);
-    }
+/**
+ * @brief 访问LAndExpAST节点进行语义检查
+ *
+ * @description: 对逻辑与表达式进行语义分析，确定表达式的类型。
+ * @param {LAndExpAST&} ast - 逻辑与表达式类
+ */
+void Checker::visit(LAndExpAST &ast) {
+  if (ast.lAndExp) {
+    ast.lAndExp->accept(*this);
+  }
+  if (ast.eqExp) {
+    ast.eqExp->accept(*this);
+  }
 }
 
-void Checker::checkBlockItem(ASTNode* node) {
-    if (!node) return;
-    if (node->name == "VarDecl") checkDecl(node);
-    else checkStmt(node);
-}
-
-TypeInfo Checker::evalNumber(ASTNode* node) const {
-    return isFloatNumber(node) ? makeType(FLOAT_TYPE) : makeType(INT_TYPE);
-}
-
-Checker::ExprResult Checker::evalLVal(ASTNode* node, bool /*asLValue*/) {
-    ExprResult result;
-    if (!node || node->name != "Name") return result;
-
-    auto* sym = lookupSymbol(node->value);
-    if (!sym) {
-        report("Use Undefined Variable \"" + node->value + "\"", node);
-        result.type = makeType(INT_TYPE);
-        return result;
-    }
-
-    result.type = sym->type;
-    result.kind = ExprKind::LValue;
-
-    if (!node->children.empty()) {
-        if (!sym->type.isArray) report("Visit non-array variable in the form of subscript variables \"" + node->value + "\"", node);
-        for (auto* idx : node->children) {
-            auto idxRes = evalExpr(idx);
-            if (!isIntLike(idxRes.type)) report("Array index not int", idx);
-        }
-        if (static_cast<int>(node->children.size()) > sym->type.arrayDim) {
-            result.type.isArray = false;
-            result.type.arrayDim = 0;
-        } else if (sym->type.arrayDim > 0) {
-            result.type.arrayDim = sym->type.arrayDim - static_cast<int>(node->children.size());
-            result.type.isArray = result.type.arrayDim > 0;
-        }
-    }
-
-    return result;
-}
-
-Checker::ExprResult Checker::evalCall(ASTNode* node) {
-    ExprResult result;
-    if (!node || node->name != "Call") return result;
-
-    auto* fn = lookupFunction(node->value);
-    if (!fn) {
-        report("Use Undefined Function \"" + node->value + "\"", node);
-        result.type = makeType(INT_TYPE);
-        return result;
-    }
-
-    vector<TypeInfo> args;
-    for (auto* arg : node->children) {
-        auto argRes = evalExpr(arg);
-        args.push_back(argRes.type);
-    }
-
-    if (args.size() != fn->params.size()) {
-        report("Can not Match Function Parameters \"" + node->value + "\"", node);
-    } else {
-        for (size_t i = 0; i < args.size(); ++i) {
-            if (!sameTypeExact(args[i], fn->params[i])) {
-                report("Can not Match Function Parameters \"" + node->value + "\"", node);
-                break;
-            }
-        }
-    }
-
-    result.type = makeType(fn->returnType);
-    result.kind = ExprKind::Call;
-    return result;
-}
-
-Checker::ExprResult Checker::evalExpr(ASTNode* node) {
-    ExprResult result;
-    if (!node) return result;
-
-    if (node->name == "Int" || node->name == "Float") {
-        result.type = evalNumber(node);
-        return result;
-    }
-
-    if (node->name == "Name") {
-        return evalLVal(node, false);
-    }
-
-    if (node->name == "Call") return evalCall(node);
-
-    if (node->name == "Assign") {
-        auto lhs = evalLVal(child(node, 0), true);
-        auto rhs = evalExpr(child(node, 1));
-        if (!sameTypeExact(lhs.type, rhs.type) && !(isIntType(lhs.type) && rhs.type.baseType == INT_TYPE && !rhs.type.isArray)) {
-            report("Func return type not match", node);
-        }
-        result.type = lhs.type;
-        return result;
-    }
-
-    if (node->name == "+" || node->name == "-" || node->name == "*" || node->name == "/" || node->name == "%") {
-        auto lhs = evalExpr(child(node, 0));
-        auto rhs = evalExpr(child(node, 1));
-        if (!isNumericType(lhs.type) || !isNumericType(rhs.type)) report("Func return type not match", node);
-        result.type = (lhs.type.baseType == FLOAT_TYPE || rhs.type.baseType == FLOAT_TYPE) ? makeType(FLOAT_TYPE) : makeType(INT_TYPE);
-        return result;
-    }
-
-    if (node->name == "==" || node->name == "!=" || node->name == "<" || node->name == "<=" || node->name == ">" || node->name == ">=") {
-        auto lhs = evalExpr(child(node, 0));
-        auto rhs = evalExpr(child(node, 1));
-        if (lhs.type.isArray || rhs.type.isArray) report("Func return type not match", node);
-        result.type = makeType(INT_TYPE);
-        return result;
-    }
-
-    if (node->name == "&&" || node->name == "||") {
-        evalExpr(child(node, 0));
-        evalExpr(child(node, 1));
-        result.type = makeType(INT_TYPE);
-        return result;
-    }
-
-    if (node->name == "neg" || node->name == "!" || node->name == "~") {
-        auto v = evalExpr(child(node, 0));
-        result.type = v.type;
-        return result;
-    }
-
-    if (node->name == "Block") {
-        checkBlock(node);
-        result.type = makeType(VOID_TYPE);
-        return result;
-    }
-
-    return result;
-}
-
-void Checker::checkStmt(ASTNode* node) {
-    if (!node) return;
-
-    if (node->name == "EmptyStmt") return;
-
-    if (node->name == "ExprStmt") {
-        evalExpr(child(node, 0));
-        return;
-    }
-
-    if (node->name == "Return") {
-        auto expr = child(node, 0);
-        if (!expr) {
-            if (currentReturnType_ != VOID_TYPE) report("Func return type not match", node);
-            return;
-        }
-        auto res = evalExpr(expr);
-        if (currentReturnType_ == VOID_TYPE || res.type.isArray || res.type.baseType != currentReturnType_) {
-            report("Func return type not match", node);
-        }
-        return;
-    }
-
-    if (node->name == "If") {
-        evalExpr(child(node, 0));
-        checkStmt(child(node, 1));
-        return;
-    }
-
-    if (node->name == "IfElse") {
-        evalExpr(child(node, 0));
-        checkStmt(child(node, 1));
-        checkStmt(child(node, 2));
-        return;
-    }
-
-    if (node->name == "While") {
-        evalExpr(child(node, 0));
-        ++loopDepth_;
-        checkStmt(child(node, 1));
-        --loopDepth_;
-        return;
-    }
-
-    if (node->name == "Break") {
-        if (loopDepth_ == 0) report("Break not in loop", node);
-        return;
-    }
-
-    if (node->name == "Continue") {
-        if (loopDepth_ == 0) report("Continue not in loop", node);
-        return;
-    }
-
-    if (node->name == "Block") {
-        checkBlock(node);
-        return;
-    }
-
-    evalExpr(node);
+/**
+ * @brief 访问LOrExpAST节点进行语义检查
+ *
+ * @description: 对逻辑或表达式进行语义分析，确定表达式的类型。
+ * @param {LOrExpAST&} ast - 逻辑或表达式类
+ */
+void Checker::visit(LOrExpAST &ast) {
+  if (ast.lOrExp) {
+    ast.lOrExp->accept(*this);
+  }
+  if (ast.lAndExp) {
+    ast.lAndExp->accept(*this);
+  }
 }

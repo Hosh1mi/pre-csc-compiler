@@ -1,5 +1,6 @@
 #include "../include/ast/ast.hpp"
 #include "../include/ir/irGen.hpp"
+#include "../include/checker/checker.hpp"
 #include <fstream>
 #include <iostream>
 #include <ostream>
@@ -54,10 +55,10 @@ int main(int argc, char **argv) {
   yyparse();
 
   // Frontend checker
-//   ErrorReporter errorReporter(std::cerr);
-//   Checker checker(errorReporter);
-//   checker.visit(*root);
-//   std::cout << "check finished" << std::endl;
+  ErrorReporter errorReporter(std::cerr);
+  Checker checker(errorReporter);
+  checker.visit(*root);
+  std::cout << "check finished" << std::endl;
 
   // Generate IR from AST
     GenIR genIR;

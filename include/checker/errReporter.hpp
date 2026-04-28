@@ -1,20 +1,44 @@
-#pragma once
+#ifndef CARROTCOMPILER_ERRORREPORTER_H
+#define CARROTCOMPILER_ERRORREPORTER_H
 
-#include <string>
-#include <vector>
+#include <iostream>
 
-struct SemanticError {
-    int line = 0;
-    std::string message;
+enum class ErrorType {
+  VarUnknown = 1,
+  VarDuplicated,
+  FuncUnknown,
+  FuncDuplicated,
+  FuncParamsNotMatch,
+  FuncReturnTypeNotMatch,
+  ArrayIndexNotInt,
+  BreakNotInLoop,
+  ContinueNotInLoop,
+  VisitVariableError,
 };
 
-class ErrReporter {
+/**
+ * @brief 错误报告器
+ *
+ * @description: 用于报告编译器中的错误信息，包括错误类型和相关的语法节点。
+ */
+class ErrorReporter {
 public:
-    void report(int line, const std::string& message);
-    bool hasError() const;
-    const std::vector<SemanticError>& errors() const;
-    void print() const;
+  /**
+   * 构造错误报告器
+   * @param error_stream - 输出错误信息的流
+   */
+  explicit ErrorReporter(std::ostream &error_stream);
+
+  // void error(const std::string &msg);
+  /**
+   * 报告特定类型的错误
+   * @param type - 错误类型
+   * @param ast - 相关的语法节点信息
+   **/
+  void error(ErrorType type, const std::string &ast);
 
 private:
-    std::vector<SemanticError> errors_;
+  std::ostream &err;
 };
+
+#endif // CARROTCOMPILER_ERRORREPORTER_H
