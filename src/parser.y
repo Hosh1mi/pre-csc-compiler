@@ -2,7 +2,7 @@
 %locations
 
 %code requires {
-  #include "ast/ast.h"
+  #include "../include/ast/ast.hpp"
   #include <memory>
   #include <string>
 }
@@ -14,7 +14,7 @@
   #include <memory>
   #include <string>
   #include <utility>
-
+  #include "../include/ast/ast.hpp"
   using std::string;
   using std::unique_ptr;
 
@@ -23,6 +23,7 @@
 
   extern int yylineno;
   extern int yylex();
+  extern FILE *yyin;
   extern void yyerror(const char *s);
   void initFileName(const char *name);
 
@@ -62,6 +63,44 @@
 %type <eqExp> EqExp
 %type <lAndExp> LAndExp
 %type <lOrExp> Cond LOrExp
+
+%union {
+  CompUnitAST* compUnit;
+  DeclDefAST* declDef;
+  DeclAST* decl;
+  DefListAST* defList;
+  DefAST* def;
+  ArraysAST* arrays;
+  InitValListAST* initValList;
+  InitValAST* initVal;
+  FuncDefAST* funcDef;
+  FuncFParamListAST* FuncFParamList;
+  FuncFParamAST* funcFParam;
+  BlockAST* block;
+  BlockItemListAST* blockItemList;
+  BlockItemAST* blockItem;
+  StmtAST* stmt;
+  ReturnStmtAST* returnStmt;
+  SelectStmtAST* selectStmt;
+  IterationStmtAST* iterationStmt;
+  LValAST* lVal;
+  PrimaryExpAST* primaryExp;
+  NumberAST* number;
+  UnaryExpAST* unaryExp;
+  CallAST* call;
+  FuncCParamListAST* funcCParamList;
+  MulExpAST* mulExp;
+  AddExpAST* addExp;
+  RelExpAST* relExp;
+  EqExpAST* eqExp;
+  LAndExpAST* lAndExp;
+  LOrExpAST* lOrExp;
+  TYPE ty;
+  UOP op;
+  string* token;
+  int int_val;
+  float float_val;
+}
 
 %type <ty> BType VoidType
 %type <op> UnaryOp

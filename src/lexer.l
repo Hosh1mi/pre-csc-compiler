@@ -1,9 +1,8 @@
 %option noyywrap
 %option yylineno
-%option c++
 
 %{
-#include "parser.tab.hh"
+#include "parser.hpp"
 #include <string>
 
 int yycolumn = 1;
@@ -50,6 +49,13 @@ SingleLineComment "//"[^\n]*
 
 {Identifier}    { yylval.token = new string(yytext); return ID; }
 
+">="            { return GTE; }
+"<="            { return LTE; }
+">"             { return GT; }
+"<"             { return LT; }
+"=="            { return EQ; }
+"!="            { return NEQ; }
+
 "("             { return LP; }
 ")"             { return RP; }
 "["             { return LB; }
@@ -68,13 +74,6 @@ SingleLineComment "//"[^\n]*
 "%"             { return MOD; }
 "&&"            { return AND; }
 "||"            { return OR; }
-           
-"=="            { return EQ; }
-"!="            { return NE; }
-"<"             { return LT; }
-"<="            { return LE; }
-">"             { return GT; }
-">="            { return GE; }
 
 [\n]            { yycolumn=1; }
 [ \r\t]         { /* Ignore useless whitespaces */ }
