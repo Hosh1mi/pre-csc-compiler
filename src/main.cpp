@@ -1,7 +1,11 @@
+// #define DEBUG_LEXER
+// #define DEBUG_PARSER
+// #define DEBUG_IRGEN
+
 #include "../include/ast/ast.hpp"
+#include "../include/ast/astPrinter.hpp"
 #include "../include/ir/irGen.hpp"
 #include "../include/checker/checker.hpp"
-#include <fstream>
 #include <iostream>
 #include <ostream>
 #include <unistd.h>
@@ -54,16 +58,36 @@ int main(int argc, char **argv) {
   // Frontend parser
   yyparse();
 
+#ifdef DEBUG_PARSER
+  std::cerr << "========== Parser Result ==========" << std::endl;
+  if (root) {
+    Printer printer;
+    std::cerr << printer.visit(*root) << std::endl;
+  } else {
+    std::cerr << "Parser output: failed to construct AST root." << std::endl;
+  }
+  std::cerr << "===================================" << std::endl;
+#endif
+
   // Frontend checker
   ErrorReporter errorReporter(std::cerr);
   Checker checker(errorReporter);
   checker.visit(*root);
-  std::cout << "check finished" << std::endl;
+  std::cout << "Check Completed." << std::endl;
 
   // Generate IR from AST
-    GenIR genIR;
-    root->accept(genIR);
-    std::unique_ptr<Module> m = genIR.getModule();
+  GenIR genIR;
+  root->accept(genIR);
+  std::unique_ptr<Module> m = genIR.getModule();
+#ifdef DEBUG_IRGEN
+  std::cerr << "========== IRGenerator Result ==========" << std::endl;
+  if (m) {
+    std::cerr << m->print() << std::endl;
+  } else {
+    std::cerr << "IR generation output: module is empty." << std::endl;
+  }
+  std::cerr << "========================================" << std::endl;
+#endif
 
 //  // Run IR optimization
 //  // TODO
@@ -81,22 +105,14 @@ int main(int argc, char **argv) {
 //  }
 //
     // Open output file
-    std::ofstream fout;
-    std::ostream *out;
-    if (output == "-") {
-    out = &std::cout;
-    } else {
-    fout.open(output);
-    out = &fout;
-    }
-
-    // Print IR result
-    const std::string IR = m->print();
-    if (print_ir) {
-        *out << IR << std::endl;
-    } else if (print_asm) {
-        *out << IR << std::endl;
-    }
+    // std::ofstream fout;
+    // std::ostream *out;
+    // if (output == "-") {
+    // out = &std::cout;
+    // } else {
+    // fout.open(output);
+    // out = &fout;
+    // }
 //
 //  // Generate assembly file
 //  // TODO
